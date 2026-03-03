@@ -29,6 +29,7 @@ class Settings:
     ).rstrip("/")
     mlx_token: str = os.getenv("MLX_TOKEN", "")
     mlx_timeout_s: int = _get_int("MLX_TIMEOUT_S", 30)
+    mlx_webhook_secret: str = os.getenv("MLX_WEBHOOK_SECRET", "")
     airproxy_host: str = os.getenv("AIRPROXY_HOST", "s1.airproxy.io")
     airproxy_port: int = _get_int("AIRPROXY_PORT", 10306)
     airproxy_username: str = os.getenv("AIRPROXY_USERNAME", "interview_scouter")

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections import deque
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -10,6 +11,7 @@ from multilogin_backend.routers.frontend import router as frontend_router
 from multilogin_backend.routers.health import router as health_router
 from multilogin_backend.routers.launcher import router as launcher_router
 from multilogin_backend.routers.mlx import router as mlx_router
+from multilogin_backend.routers.webhook import router as webhook_router
 from multilogin_backend.services.mlx_client import MultiloginClient
 
 
@@ -18,6 +20,7 @@ async def lifespan(app: FastAPI):
     settings = get_settings()
     app.state.settings = settings
     app.state.mlx_client = MultiloginClient(settings)
+    app.state.proxy_events = deque(maxlen=100)
     try:
         yield
     finally:
@@ -25,10 +28,11 @@ async def lifespan(app: FastAPI):
 
 
 def create_app() -> FastAPI:
-    app = FastAPI(title="Multilogin Backend", lifespan=lifespan)
+    app = FastAPI(title="Multilogin API Proxy", lifespan=lifespan)
     app.include_router(frontend_router)
     app.include_router(health_router)
     app.include_router(mlx_router)
+    app.include_router(webhook_router)
     app.include_router(launcher_router)
     app.include_router(airproxy_router)
     return app

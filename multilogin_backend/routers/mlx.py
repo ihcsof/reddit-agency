@@ -11,17 +11,12 @@ from multilogin_backend.services.mlx_client import MultiloginClient
 
 router = APIRouter(prefix="/mlx", tags=["mlx"])
 
+PROXY_DATA_URL = "https://profile-proxy.multilogin.com/v1/user"
 
-class SignInRequest(BaseModel):
-    email: str
+
+class ProfileLoginRequest(BaseModel):
     password: str
-    password_is_md5: bool = False
-
-
-class RefreshTokenRequest(BaseModel):
-    email: str
-    refresh_token: str
-    workspace_id: str
+    profile_id: str
 
 
 async def _extract_body(request: Request) -> tuple[Any | None, bytes | None]:
@@ -36,54 +31,61 @@ async def _extract_body(request: Request) -> tuple[Any | None, bytes | None]:
     return None, body
 
 
-@router.post("/user/signin")
-async def user_signin(
-    payload: SignInRequest,
+@router.post("/auth/login")
+@router.post("/profile/login")
+async def profile_login(
+    payload: ProfileLoginRequest,
     client: MultiloginClient = Depends(get_mlx_client),
 ):
-    upstream_payload = {
-        "email": payload.email,
-        "password": payload.password,
-    }
-    return await client.request("POST", "/user/signin", json=upstream_payload)
+    return await client.request("POST", "/profile/login", json=payload.model_dump())
 
 
-@router.post("/user/refresh-token")
-async def refresh_token(
-    payload: RefreshTokenRequest,
-    client: MultiloginClient = Depends(get_mlx_client),
-):
-    return await client.request("POST", "/user/refresh_token", json=payload.model_dump())
-
-
-@router.get("/user/workspaces")
-async def user_workspaces(
+@router.get("/proxy/user")
+@router.get("/proxy/fetch-data")
+async def fetch_proxy_data(
     request: Request,
     client: MultiloginClient = Depends(get_mlx_client),
 ):
     return await client.request(
         "GET",
-        "/user/workspaces",
+        PROXY_DATA_URL,
         params=list(request.query_params.multi_items()),
         headers=request.headers,
     )
 
 
-@router.get("/workspace/automation-token")
-async def workspace_automation_token(
+@router.post("/profile/search")
+async def profile_search(
     request: Request,
     client: MultiloginClient = Depends(get_mlx_client),
 ):
+    json_body, raw_body = await _extract_body(request)
     return await client.request(
-        "GET",
-        "/workspace/automation_token",
-        params=list(request.query_params.multi_items()),
+        "POST",
+        "/profile/search",
+        json=json_body,
+        content=raw_body,
+        headers=request.headers,
+    )
+
+
+@router.post("/profile/metas")
+async def profile_metas(
+    request: Request,
+    client: MultiloginClient = Depends(get_mlx_client),
+):
+    json_body, raw_body = await _extract_body(request)
+    return await client.request(
+        "POST",
+        "/profile/metas",
+        json=json_body,
+        content=raw_body,
         headers=request.headers,
     )
 
 
 @router.api_route(
-    "/{path:path}",
+    "/raw/{path:path}",
     methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD"],
 )
 async def mlx_passthrough(

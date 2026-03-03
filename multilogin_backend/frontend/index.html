@@ -3,19 +3,20 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Multilogin Local Console</title>
+    <title>Multilogin API Proxy Console</title>
     <style>
       :root {
-        --bg: #f5f1e8;
-        --panel: rgba(255, 252, 245, 0.9);
+        --paper: #f7f2ea;
+        --panel: rgba(255, 251, 244, 0.92);
         --panel-strong: #fffdf8;
-        --ink: #1d1b19;
-        --muted: #6a635b;
-        --line: #d9d1c6;
-        --accent: #006d77;
-        --accent-strong: #004f57;
-        --danger: #9f2a2a;
-        --shadow: 0 18px 45px rgba(41, 35, 28, 0.08);
+        --ink: #171512;
+        --muted: #70675d;
+        --line: #ddd2c3;
+        --accent: #0a6c74;
+        --accent-strong: #064f55;
+        --warm: #c47b2a;
+        --danger: #9f2b2b;
+        --shadow: 0 18px 44px rgba(39, 31, 22, 0.08);
       }
 
       * {
@@ -25,52 +26,49 @@
       body {
         margin: 0;
         color: var(--ink);
-        font-family: "IBM Plex Sans", "Avenir Next", "Segoe UI", sans-serif;
+        font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
         background:
-          radial-gradient(circle at top left, rgba(0, 109, 119, 0.14), transparent 30%),
-          radial-gradient(circle at top right, rgba(238, 155, 0, 0.12), transparent 28%),
-          linear-gradient(180deg, #f8f4ec 0%, #f1ebe0 100%);
+          radial-gradient(circle at top left, rgba(10, 108, 116, 0.12), transparent 26%),
+          radial-gradient(circle at top right, rgba(196, 123, 42, 0.12), transparent 28%),
+          linear-gradient(180deg, #fbf7f0 0%, #f3ece1 100%);
       }
 
       .shell {
-        max-width: 1380px;
+        max-width: 1420px;
         margin: 0 auto;
-        padding: 24px 18px 40px;
+        padding: 24px 18px 42px;
       }
 
       .hero {
-        display: grid;
-        gap: 10px;
         margin-bottom: 18px;
         padding: 22px;
         border: 1px solid var(--line);
-        border-radius: 22px;
-        background: linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(247, 242, 234, 0.92));
+        border-radius: 24px;
+        background: linear-gradient(135deg, rgba(255, 255, 255, 0.94), rgba(247, 240, 230, 0.9));
         box-shadow: var(--shadow);
       }
 
       .hero h1 {
-        margin: 0;
+        margin: 0 0 10px;
         font-family: "Iowan Old Style", "Palatino Linotype", serif;
-        font-size: clamp(1.9rem, 4vw, 3rem);
+        font-size: clamp(2rem, 4.6vw, 3.25rem);
         line-height: 1;
       }
 
       .hero p {
         margin: 0;
+        max-width: 74ch;
         color: var(--muted);
-        max-width: 70ch;
       }
 
-      .hero-meta {
+      .meta {
         display: flex;
         gap: 10px;
         flex-wrap: wrap;
+        margin-top: 14px;
       }
 
       .pill {
-        display: inline-flex;
-        align-items: center;
         padding: 7px 12px;
         border-radius: 999px;
         border: 1px solid var(--line);
@@ -81,7 +79,7 @@
 
       .layout {
         display: grid;
-        grid-template-columns: minmax(290px, 420px) minmax(0, 1fr);
+        grid-template-columns: minmax(320px, 470px) minmax(0, 1fr);
         gap: 18px;
       }
 
@@ -99,16 +97,15 @@
         backdrop-filter: blur(8px);
       }
 
-      .card h2,
-      .card h3 {
-        margin: 0 0 10px;
+      h2 {
+        margin: 0 0 8px;
         font-size: 1rem;
       }
 
-      .card p {
+      p {
         margin: 0 0 12px;
         color: var(--muted);
-        font-size: 0.95rem;
+        font-size: 0.94rem;
       }
 
       .grid {
@@ -120,30 +117,36 @@
         grid-template-columns: repeat(2, minmax(0, 1fr));
       }
 
+      .row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+      }
+
       label {
         display: grid;
         gap: 6px;
-        font-size: 0.88rem;
         color: var(--muted);
+        font-size: 0.87rem;
       }
 
       input,
       select,
       textarea {
         width: 100%;
+        padding: 11px 12px;
         border: 1px solid var(--line);
         border-radius: 12px;
-        padding: 11px 12px;
         color: var(--ink);
         background: var(--panel-strong);
         font: inherit;
       }
 
       textarea {
-        min-height: 120px;
+        min-height: 112px;
         resize: vertical;
-        font-family: "Berkeley Mono", "IBM Plex Mono", "SFMono-Regular", monospace;
-        font-size: 0.92rem;
+        font-family: "IBM Plex Mono", "SFMono-Regular", monospace;
+        font-size: 0.91rem;
       }
 
       input[type="checkbox"] {
@@ -160,77 +163,65 @@
         font: inherit;
         font-weight: 600;
         cursor: pointer;
-        transition: transform 120ms ease, background 120ms ease;
-      }
-
-      button:hover {
-        transform: translateY(-1px);
-        background: var(--accent-strong);
       }
 
       button.secondary {
-        background: #eae2d5;
+        background: #e9dfd0;
         color: var(--ink);
       }
 
-      button.secondary:hover {
-        background: #dfd5c6;
+      button.warm {
+        background: var(--warm);
       }
 
-      .row {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 10px;
+      .hint {
+        color: var(--muted);
+        font-size: 0.84rem;
       }
 
       .response {
-        min-height: 70vh;
+        min-height: 76vh;
         display: grid;
         grid-template-rows: auto auto 1fr;
         gap: 12px;
       }
 
-      .response-bar {
+      .response-head {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        gap: 12px;
+        gap: 10px;
         flex-wrap: wrap;
       }
 
       .status {
-        font-size: 0.95rem;
         color: var(--muted);
+        font-size: 0.95rem;
       }
 
       .status strong {
         color: var(--ink);
       }
 
+      .status .bad {
+        color: var(--danger);
+      }
+
       pre {
         margin: 0;
-        min-height: 420px;
-        overflow: auto;
+        min-height: 480px;
         padding: 16px;
+        overflow: auto;
         border-radius: 16px;
-        background: #161513;
-        color: #f7f1e6;
         border: 1px solid #2b2824;
-        font-family: "Berkeley Mono", "IBM Plex Mono", "SFMono-Regular", monospace;
+        background: #171513;
+        color: #f8f1e6;
+        font-family: "IBM Plex Mono", "SFMono-Regular", monospace;
         font-size: 0.9rem;
         line-height: 1.5;
       }
 
-      .hint {
-        font-size: 0.84rem;
-        color: var(--muted);
-      }
-
-      .danger {
-        color: var(--danger);
-      }
-
-      @media (max-width: 980px) {
+      @media (max-width: 1024px) {
         .layout {
           grid-template-columns: 1fr;
         }
@@ -244,15 +235,16 @@
   <body>
     <main class="shell">
       <section class="hero">
-        <h1>Multilogin Local Console</h1>
+        <h1>Multilogin API Proxy Console</h1>
         <p>
-          Thin local UI for the FastAPI proxy. Use the common actions on the left, or hit any
-          proxied endpoint through the generic request console.
+          Local-only control surface for the FastAPI backend. The source of truth for proxy state is
+          Multilogin's proxy-data endpoint, while webhook calls are treated as notifications and
+          cached locally for inspection.
         </p>
-        <div class="hero-meta">
-          <span class="pill">Served by this backend</span>
-          <span class="pill">Token can be injected as <code>X-MLX-Token</code></span>
-          <span class="pill">Playwright stays available in the project</span>
+        <div class="meta">
+          <span class="pill"><code>python -m multilogin_backend</code></span>
+          <span class="pill">Token forwarded as <code>X-MLX-Token</code></span>
+          <span class="pill">Playwright stays installed for later runtime work</span>
         </div>
       </section>
 
@@ -260,163 +252,126 @@
         <div class="stack">
           <div class="card">
             <h2>Session</h2>
-            <p>Keep a working token locally in the browser and reuse it in requests.</p>
+            <p>Keep a token in local storage and reuse it across requests.</p>
             <div class="grid">
               <label>
-                Stored token
-                <textarea id="sessionToken" placeholder="Paste a token or sign in below"></textarea>
+                Stored Multilogin token
+                <textarea id="sessionToken" placeholder="Paste a bearer token here"></textarea>
               </label>
               <div class="row">
                 <button id="saveToken">Save Token</button>
                 <button id="clearToken" class="secondary">Clear Token</button>
+                <button data-action="health" class="secondary">Health</button>
               </div>
-              <div class="hint">Nothing is sent unless a request enables token forwarding.</div>
             </div>
           </div>
 
           <div class="card">
-            <h2>Health</h2>
-            <p>Quick check that the local proxy is up.</p>
-            <button data-action="health">Run /health</button>
-          </div>
-
-          <div class="card">
-            <h2>Sign In</h2>
-            <p>Calls <code>POST /mlx/user/signin</code>. If a token is returned, it can be stored locally.</p>
+            <h2>Profile Login</h2>
+            <p>Exact doc-anchored flow: <code>POST /mlx/profile/login</code> to upstream <code>/profile/login</code>.</p>
             <div class="grid">
               <label>
-                Email
-                <input id="signinEmail" type="email" placeholder="name@example.com">
+                Profile ID
+                <input id="profileLoginId" placeholder="Profile UUID">
               </label>
               <label>
                 Password
-                <input id="signinPassword" type="password" placeholder="Password">
+                <input id="profileLoginPassword" type="password" placeholder="Profile password">
               </label>
-              <div class="row">
-                <button data-action="signin">Sign In</button>
-              </div>
+              <button data-action="profileLogin">Login Profile</button>
             </div>
           </div>
 
           <div class="card">
-            <h2>Workspace Tools</h2>
-            <p>Convenience calls for workspaces and automation tokens.</p>
+            <h2>Proxy State</h2>
+            <p>Exact doc-anchored flow: <code>GET /mlx/proxy/user</code> to upstream <code>https://profile-proxy.multilogin.com/v1/user</code>.</p>
             <div class="grid">
               <div class="row">
-                <button data-action="workspaces">Get Workspaces</button>
-                <button data-action="airproxy" class="secondary">Get Airproxy</button>
+                <button data-action="fetchProxy">Fetch Proxy Data</button>
+                <button data-action="defaultProxy" class="secondary">Default Airproxy</button>
               </div>
               <label>
-                Automation token expiration
-                <input id="automationExpiration" value="1h" placeholder="1h, 24h, 1w, no_exp">
-              </label>
-              <button data-action="automation">Create Automation Token</button>
-            </div>
-          </div>
-
-          <div class="card">
-            <h2>Refresh Token</h2>
-            <p>Calls <code>POST /mlx/user/refresh-token</code> to switch workspace.</p>
-            <div class="grid">
-              <label>
-                Email
-                <input id="refreshEmail" type="email" placeholder="name@example.com">
+                Inject default proxy into payload at path
+                <input id="injectPath" value="proxy" placeholder="proxy or parameters.proxy">
               </label>
               <label>
-                Refresh token
-                <input id="refreshToken" placeholder="Refresh token">
-              </label>
-              <label>
-                Workspace ID
-                <input id="refreshWorkspaceId" placeholder="Workspace UUID">
-              </label>
-              <button data-action="refresh">Refresh Token</button>
-            </div>
-          </div>
-
-          <div class="card">
-            <h2>Launcher</h2>
-            <p>Quick controls for profile start, status, stop, and quick profile launch.</p>
-            <div class="grid">
-              <div class="grid two">
-                <label>
-                  Folder ID
-                  <input id="folderId" placeholder="Folder UUID">
-                </label>
-                <label>
-                  Profile ID
-                  <input id="profileId" placeholder="Profile UUID">
-                </label>
-              </div>
-              <div class="grid two">
-                <label>
-                  Automation type
-                  <select id="automationType">
-                    <option value="selenium">selenium</option>
-                    <option value="puppeteer">puppeteer</option>
-                    <option value="playwright">playwright</option>
-                  </select>
-                </label>
-                <label>
-                  Headless mode
-                  <select id="headlessMode">
-                    <option value="false">false</option>
-                    <option value="true">true</option>
-                  </select>
-                </label>
-              </div>
-              <div class="row">
-                <button data-action="startProfile">Start Profile</button>
-                <button data-action="statusProfile" class="secondary">Get Status</button>
-                <button data-action="stopProfile" class="secondary">Stop Profile</button>
-              </div>
-              <label>
-                Quick profile payload JSON
-                <textarea id="quickPayload">{
-  "browser_type": "mimic",
-  "os_type": "windows",
-  "automation": "playwright",
-  "is_headless": false,
-  "parameters": {
-    "flags": {
-      "audio_masking": "natural",
-      "fonts_masking": "mask",
-      "geolocation_masking": "mask",
-      "geolocation_popup": "prompt",
-      "graphics_masking": "mask",
-      "graphics_noise": "mask",
-      "localization_masking": "mask",
-      "media_devices_masking": "natural",
-      "navigator_masking": "mask",
-      "ports_masking": "mask",
-      "proxy_masking": "disabled",
-      "screen_masking": "mask",
-      "timezone_masking": "mask",
-      "webrtc_masking": "mask"
-    }
-  }
+                Payload to modify
+                <textarea id="injectPayload">{
+  "name": "example-profile",
+  "parameters": {}
 }</textarea>
               </label>
-              <button data-action="quickProfile">Launch Quick Profile</button>
+              <button data-action="injectProxy" class="warm">Inject Default Proxy</button>
             </div>
           </div>
 
           <div class="card">
-            <h2>Generic Console</h2>
-            <p>Use any exposed proxy route without leaving the page.</p>
+            <h2>Profile Helpers</h2>
+            <p>Thin wrappers over <code>/profile/search</code> and <code>/profile/metas</code>.</p>
+            <div class="grid">
+              <label>
+                Search payload JSON
+                <textarea id="searchPayload">{
+  "limit": 20,
+  "offset": 0,
+  "search_text": "",
+  "storage_type": "all",
+  "order_by": "created_at",
+  "sort": "asc"
+}</textarea>
+              </label>
+              <div class="row">
+                <button data-action="profileSearch">Profile Search</button>
+                <button data-action="profileMetas" class="secondary">Profile Metas</button>
+              </div>
+              <label>
+                Metas payload JSON
+                <textarea id="metasPayload">{
+  "ids": []
+}</textarea>
+              </label>
+            </div>
+          </div>
+
+          <div class="card">
+            <h2>Webhook Tools</h2>
+            <p>Local webhook receiver for proxy change notifications plus an event buffer viewer.</p>
+            <div class="grid">
+              <label>
+                Optional webhook secret
+                <input id="webhookSecret" placeholder="Used as X-Webhook-Secret if set">
+              </label>
+              <label>
+                Test webhook payload
+                <textarea id="webhookPayload">{
+  "event": "proxy_changed",
+  "profile_id": "demo-profile-id",
+  "proxy_id": "demo-proxy-id"
+}</textarea>
+              </label>
+              <div class="row">
+                <button data-action="sendWebhook">Send Test Webhook</button>
+                <button data-action="loadWebhookEvents" class="secondary">Load Events</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <h2>Raw Requests</h2>
+            <p>Use <code>/mlx/raw/*</code> or <code>/launcher/raw/*</code> without leaving the page.</p>
             <div class="grid">
               <div class="grid two">
                 <label>
-                  Upstream group
-                  <select id="genericUpstream">
+                  Target
+                  <select id="rawTarget">
                     <option value="mlx">mlx</option>
                     <option value="launcher">launcher</option>
-                    <option value="raw">raw local path</option>
+                    <option value="local">local route</option>
                   </select>
                 </label>
                 <label>
                   Method
-                  <select id="genericMethod">
+                  <select id="rawMethod">
                     <option>GET</option>
                     <option>POST</option>
                     <option>PUT</option>
@@ -427,38 +382,33 @@
               </div>
               <label>
                 Path
-                <input id="genericPath" placeholder="/user/workspaces or /api/v3/profile/quick">
+                <input id="rawPath" placeholder="/profile/search or /api/v1/version">
               </label>
               <label>
                 Query string
-                <input id="genericQuery" placeholder="expiration_period=1h">
+                <input id="rawQuery" placeholder="limit=10&offset=0">
+              </label>
+              <label>
+                Override token
+                <input id="rawToken" placeholder="Leave blank to use stored token">
               </label>
               <label>
                 JSON body
-                <textarea id="genericBody" placeholder='{"key":"value"}'></textarea>
+                <textarea id="rawBody" placeholder='{"key":"value"}'></textarea>
               </label>
-              <label>
-                Override token sent as <code>X-MLX-Token</code>
-                <input id="genericToken" placeholder="Leave blank to use stored token">
-              </label>
-              <label>
-                <input id="useStoredToken" type="checkbox" checked>
-                Auto-send stored token when no override token is set
-              </label>
-              <button data-action="generic">Send Request</button>
+              <button data-action="rawRequest">Send Raw Request</button>
             </div>
           </div>
         </div>
 
         <div class="stack">
           <div class="card response">
-            <div class="response-bar">
+            <div class="response-head">
               <h2>Response</h2>
               <div class="status" id="responseStatus">Idle</div>
             </div>
             <div class="hint">
-              Requests run against the local backend. Upstream errors are surfaced with the upstream
-              status code.
+              Upstream non-2xx responses are passed through with the upstream status code and body.
             </div>
             <pre id="responseBody">No request yet.</pre>
           </div>
@@ -467,10 +417,10 @@
     </main>
 
     <script>
+      const tokenStorageKey = "mlx-proxy-console-token";
       const responseStatus = document.getElementById("responseStatus");
       const responseBody = document.getElementById("responseBody");
       const sessionToken = document.getElementById("sessionToken");
-      const tokenStorageKey = "mlx-local-console-token";
 
       function loadStoredToken() {
         sessionToken.value = localStorage.getItem(tokenStorageKey) || "";
@@ -486,25 +436,17 @@
       }
 
       function pretty(value) {
-        if (typeof value === "string") {
-          return value;
-        }
-        return JSON.stringify(value, null, 2);
+        return typeof value === "string" ? value : JSON.stringify(value, null, 2);
       }
 
       function setResponse(status, body, ok) {
-        responseStatus.innerHTML = `<strong>${status}</strong>${ok ? "" : ' <span class="danger">error</span>'}`;
-        responseBody.textContent = typeof body === "string" ? body : pretty(body);
+        responseStatus.innerHTML = `<strong>${status}</strong>${ok ? "" : ' <span class="bad">error</span>'}`;
+        responseBody.textContent = pretty(body);
       }
 
-      function buildHeaders({ extra = {}, allowGenericOverride = false } = {}) {
-        const headers = { ...extra };
-        const overrideToken = allowGenericOverride
-          ? document.getElementById("genericToken")?.value.trim()
-          : "";
-        const stored = sessionToken.value.trim();
-        const useStored = document.getElementById("useStoredToken")?.checked;
-        const token = overrideToken || (useStored ? stored : "");
+      function buildTokenHeaders(overrideValue = "") {
+        const headers = {};
+        const token = overrideValue.trim() || sessionToken.value.trim();
         if (token) {
           headers["X-MLX-Token"] = token;
         }
@@ -515,152 +457,130 @@
         setResponse("Loading", "Request in flight...", true);
         const response = await fetch(url, options);
         const contentType = response.headers.get("content-type") || "";
-        let payload;
-        if (contentType.includes("application/json")) {
-          payload = await response.json();
-        } else {
-          payload = await response.text();
-        }
+        const payload = contentType.includes("application/json")
+          ? await response.json()
+          : await response.text();
         setResponse(`${response.status} ${response.statusText}`, payload, response.ok);
         return payload;
+      }
+
+      function parseJson(id) {
+        const value = document.getElementById(id).value.trim();
+        return value ? JSON.parse(value) : null;
       }
 
       async function onHealth() {
         await callApi("/health");
       }
 
-      async function onSignin() {
+      async function onProfileLogin() {
         const payload = {
-          email: document.getElementById("signinEmail").value.trim(),
-          password: document.getElementById("signinPassword").value,
-          password_is_md5: false
+          profile_id: document.getElementById("profileLoginId").value.trim(),
+          password: document.getElementById("profileLoginPassword").value
         };
-        const result = await callApi("/mlx/user/signin", {
+        await callApi("/mlx/profile/login", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload)
         });
-        const token = result?.data?.token || result?.token;
-        if (token) {
-          sessionToken.value = token;
-          saveStoredToken();
-        }
       }
 
-      async function onWorkspaces() {
-        await callApi("/mlx/user/workspaces", {
-          headers: buildHeaders()
+      async function onFetchProxy() {
+        await callApi("/mlx/proxy/user", {
+          headers: buildTokenHeaders()
         });
       }
 
-      async function onAutomation() {
-        const expiration = encodeURIComponent(document.getElementById("automationExpiration").value.trim() || "1h");
-        await callApi(`/mlx/workspace/automation-token?expiration_period=${expiration}`, {
-          headers: buildHeaders()
+      async function onDefaultProxy() {
+        await callApi("/airproxy/default-proxy");
+      }
+
+      async function onInjectProxy() {
+        await callApi("/airproxy/inject", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            path: document.getElementById("injectPath").value.trim(),
+            payload: parseJson("injectPayload")
+          })
         });
       }
 
-      async function onAirproxy() {
-        await callApi("/airproxy/proxy");
-      }
-
-      async function onRefresh() {
-        const payload = {
-          email: document.getElementById("refreshEmail").value.trim(),
-          refresh_token: document.getElementById("refreshToken").value.trim(),
-          workspace_id: document.getElementById("refreshWorkspaceId").value.trim()
-        };
-        await callApi("/mlx/user/refresh-token", {
+      async function onProfileSearch() {
+        await callApi("/mlx/profile/search", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            ...buildHeaders()
+            ...buildTokenHeaders()
           },
-          body: JSON.stringify(payload)
+          body: JSON.stringify(parseJson("searchPayload"))
         });
       }
 
-      async function onStartProfile() {
-        const folderId = document.getElementById("folderId").value.trim();
-        const profileId = document.getElementById("profileId").value.trim();
-        const automationType = document.getElementById("automationType").value;
-        const headlessMode = document.getElementById("headlessMode").value;
-        const query = new URLSearchParams({
-          automation_type: automationType,
-          headless_mode: headlessMode
-        });
-        await callApi(`/launcher/profile/f/${encodeURIComponent(folderId)}/p/${encodeURIComponent(profileId)}/start?${query.toString()}`, {
-          headers: buildHeaders()
-        });
-      }
-
-      async function onStatusProfile() {
-        const profileId = document.getElementById("profileId").value.trim();
-        await callApi(`/launcher/profile/status/p/${encodeURIComponent(profileId)}`, {
-          headers: buildHeaders()
-        });
-      }
-
-      async function onStopProfile() {
-        const profileId = document.getElementById("profileId").value.trim();
-        await callApi(`/launcher/profile/stop/p/${encodeURIComponent(profileId)}`, {
-          headers: buildHeaders()
-        });
-      }
-
-      async function onQuickProfile() {
-        const payload = JSON.parse(document.getElementById("quickPayload").value);
-        await callApi("/launcher/profile/quick", {
+      async function onProfileMetas() {
+        await callApi("/mlx/profile/metas", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            ...buildHeaders()
+            ...buildTokenHeaders()
           },
-          body: JSON.stringify(payload)
+          body: JSON.stringify(parseJson("metasPayload"))
         });
       }
 
-      async function onGeneric() {
-        const upstream = document.getElementById("genericUpstream").value;
-        const method = document.getElementById("genericMethod").value;
-        const rawPath = document.getElementById("genericPath").value.trim();
-        const query = document.getElementById("genericQuery").value.trim();
-        const rawBody = document.getElementById("genericBody").value.trim();
+      async function onSendWebhook() {
+        const headers = { "Content-Type": "application/json" };
+        const secret = document.getElementById("webhookSecret").value.trim();
+        if (secret) {
+          headers["X-Webhook-Secret"] = secret;
+        }
+        await callApi("/mlx/webhooks/proxy-changed", {
+          method: "POST",
+          headers,
+          body: JSON.stringify(parseJson("webhookPayload"))
+        });
+      }
 
-        let basePath = rawPath;
-        if (upstream === "mlx") {
-          basePath = `/mlx${rawPath.startsWith("/") ? rawPath : `/${rawPath}`}`;
-        } else if (upstream === "launcher") {
-          basePath = `/launcher${rawPath.startsWith("/") ? rawPath : `/${rawPath}`}`;
+      async function onLoadWebhookEvents() {
+        await callApi("/mlx/webhooks/last-proxy-events");
+      }
+
+      async function onRawRequest() {
+        const target = document.getElementById("rawTarget").value;
+        const method = document.getElementById("rawMethod").value;
+        const rawPath = document.getElementById("rawPath").value.trim();
+        const query = document.getElementById("rawQuery").value.trim();
+        const rawBody = document.getElementById("rawBody").value.trim();
+        const token = document.getElementById("rawToken").value.trim();
+
+        let path = rawPath;
+        if (target === "mlx") {
+          path = `/mlx/raw${rawPath.startsWith("/") ? rawPath : `/${rawPath}`}`;
+        } else if (target === "launcher") {
+          path = `/launcher/raw${rawPath.startsWith("/") ? rawPath : `/${rawPath}`}`;
         }
 
-        const url = query ? `${basePath}?${query}` : basePath;
-        const headers = buildHeaders({ allowGenericOverride: true });
+        const url = query ? `${path}?${query}` : path;
+        const headers = buildTokenHeaders(token);
         const options = { method, headers };
-
         if (rawBody) {
           headers["Content-Type"] = "application/json";
           options.body = rawBody;
         }
-
         await callApi(url, options);
       }
 
-      document.getElementById("saveToken").addEventListener("click", saveStoredToken);
-      document.getElementById("clearToken").addEventListener("click", clearStoredToken);
-
       const actions = {
         health: onHealth,
-        signin: onSignin,
-        workspaces: onWorkspaces,
-        automation: onAutomation,
-        airproxy: onAirproxy,
-        refresh: onRefresh,
-        startProfile: onStartProfile,
-        statusProfile: onStatusProfile,
-        stopProfile: onStopProfile,
-        quickProfile: onQuickProfile,
-        generic: onGeneric
+        profileLogin: onProfileLogin,
+        fetchProxy: onFetchProxy,
+        defaultProxy: onDefaultProxy,
+        injectProxy: onInjectProxy,
+        profileSearch: onProfileSearch,
+        profileMetas: onProfileMetas,
+        sendWebhook: onSendWebhook,
+        loadWebhookEvents: onLoadWebhookEvents,
+        rawRequest: onRawRequest
       };
 
       document.querySelectorAll("[data-action]").forEach((button) => {
@@ -672,6 +592,9 @@
           }
         });
       });
+
+      document.getElementById("saveToken").addEventListener("click", saveStoredToken);
+      document.getElementById("clearToken").addEventListener("click", clearStoredToken);
 
       loadStoredToken();
     </script>

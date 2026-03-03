@@ -91,7 +91,7 @@ async def quick_profile(
 
 
 @router.api_route(
-    "/{path:path}",
+    "/raw/{path:path}",
     methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD"],
 )
 async def launcher_passthrough(
