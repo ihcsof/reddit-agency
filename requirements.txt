@@ -3,4 +3,5 @@ uvicorn[standard]>=0.27
 httpx>=0.26
 pydantic>=2
 python-dotenv>=1.0
-playwright>=1.40
+pandas>=2.0
+playwright>=1.44.0

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 from typing import Any
 
 from fastapi import APIRouter, Depends, Request
@@ -17,6 +18,11 @@ PROXY_DATA_URL = "https://profile-proxy.multilogin.com/v1/user"
 class ProfileLoginRequest(BaseModel):
     password: str
     profile_id: str
+    password_is_md5: bool = False
+
+
+def _md5_hexdigest(value: str) -> str:
+    return hashlib.md5(value.encode("utf-8")).hexdigest()
 
 
 async def _extract_body(request: Request) -> tuple[Any | None, bytes | None]:
@@ -31,13 +37,18 @@ async def _extract_body(request: Request) -> tuple[Any | None, bytes | None]:
     return None, body
 
 
+@router.post("/login")
 @router.post("/auth/login")
 @router.post("/profile/login")
 async def profile_login(
     payload: ProfileLoginRequest,
     client: MultiloginClient = Depends(get_mlx_client),
 ):
-    return await client.request("POST", "/profile/login", json=payload.model_dump())
+    upstream_payload = {
+        "profile_id": payload.profile_id,
+        "password": payload.password if payload.password_is_md5 else _md5_hexdigest(payload.password),
+    }
+    return await client.request("POST", "/profile/login", json=upstream_payload)
 
 
 @router.get("/proxy/user")
@@ -52,7 +63,6 @@ async def fetch_proxy_data(
         params=list(request.query_params.multi_items()),
         headers=request.headers,
     )
-
 
 @router.post("/profile/search")
 async def profile_search(

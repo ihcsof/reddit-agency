@@ -28,7 +28,7 @@ class MultiloginClient:
     async def request(
         self,
         method: str,
-        path: str,
+        url_or_path: str,
         *,
         upstream: UpstreamName = "mlx",
         token: str | None = None,
@@ -42,7 +42,7 @@ class MultiloginClient:
         if resolved_token:
             request_headers["Authorization"] = f"Bearer {resolved_token}"
 
-        url = self._build_url(path=path, upstream=upstream)
+        url = self._build_url(url_or_path=url_or_path, upstream=upstream)
 
         try:
             response = await self._client.request(
@@ -66,16 +66,16 @@ class MultiloginClient:
             detail=self._extract_error_detail(response),
         )
 
-    def _build_url(self, *, path: str, upstream: UpstreamName) -> str:
-        if path.startswith("http://") or path.startswith("https://"):
-            return path
+    def _build_url(self, *, url_or_path: str, upstream: UpstreamName) -> str:
+        if url_or_path.startswith("http://") or url_or_path.startswith("https://"):
+            return url_or_path
 
         base_url = (
             self._settings.mlx_base_url
             if upstream == "mlx"
             else self._settings.mlx_launcher_base_url
         )
-        normalized_path = path if path.startswith("/") else f"/{path}"
+        normalized_path = url_or_path if url_or_path.startswith("/") else f"/{url_or_path}"
 
         if upstream == "launcher" and normalized_path.startswith("/api/"):
             parts = urlsplit(base_url)

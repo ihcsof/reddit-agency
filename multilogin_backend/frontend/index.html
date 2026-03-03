@@ -268,7 +268,7 @@
 
           <div class="card">
             <h2>Profile Login</h2>
-            <p>Exact doc-anchored flow: <code>POST /mlx/profile/login</code> to upstream <code>/profile/login</code>.</p>
+            <p>Exact doc-anchored flow: <code>POST /mlx/login</code> to upstream <code>/profile/login</code>.</p>
             <div class="grid">
               <label>
                 Profile ID
@@ -277,6 +277,10 @@
               <label>
                 Password
                 <input id="profileLoginPassword" type="password" placeholder="Profile password">
+              </label>
+              <label>
+                <input id="profileLoginIsMd5" type="checkbox">
+                Password is already MD5 hashed
               </label>
               <button data-action="profileLogin">Login Profile</button>
             </div>
@@ -352,6 +356,7 @@
               <div class="row">
                 <button data-action="sendWebhook">Send Test Webhook</button>
                 <button data-action="loadWebhookEvents" class="secondary">Load Events</button>
+                <button data-action="refreshProxyState" class="secondary">Refresh Proxy State</button>
               </div>
             </div>
           </div>
@@ -476,9 +481,10 @@
       async function onProfileLogin() {
         const payload = {
           profile_id: document.getElementById("profileLoginId").value.trim(),
-          password: document.getElementById("profileLoginPassword").value
+          password: document.getElementById("profileLoginPassword").value,
+          password_is_md5: document.getElementById("profileLoginIsMd5").checked
         };
-        await callApi("/mlx/profile/login", {
+        await callApi("/mlx/login", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload)
@@ -545,6 +551,17 @@
         await callApi("/mlx/webhooks/last-proxy-events");
       }
 
+      async function onRefreshProxyState() {
+        await callApi("/mlx/webhooks/refresh-proxy-state", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...buildTokenHeaders()
+          },
+          body: JSON.stringify({ extra: {} })
+        });
+      }
+
       async function onRawRequest() {
         const target = document.getElementById("rawTarget").value;
         const method = document.getElementById("rawMethod").value;
@@ -580,6 +597,7 @@
         profileMetas: onProfileMetas,
         sendWebhook: onSendWebhook,
         loadWebhookEvents: onLoadWebhookEvents,
+        refreshProxyState: onRefreshProxyState,
         rawRequest: onRawRequest
       };
 

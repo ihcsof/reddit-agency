@@ -4,6 +4,7 @@ Small FastAPI backend that proxies the Multilogin X API and launcher API, with a
 internal frontend at `/` and `/ui` for local interaction.
 
 Playwright stays installed and ready for later Multilogin-driven browser automation work.
+The backend is isolated from any scraper startup logic and does not require `SIDESHIFT_*` env vars.
 
 ## Run
 
@@ -40,6 +41,7 @@ Important variables in `.env`:
 - `GET /`
 - `GET /ui`
 - `POST /mlx/auth/login`
+- `POST /mlx/login`
 - `POST /mlx/profile/login`
 - `GET /mlx/proxy/user`
 - `GET /mlx/proxy/fetch-data`
@@ -51,6 +53,7 @@ Important variables in `.env`:
 - `POST /airproxy/inject`
 - `POST /mlx/webhooks/proxy-changed`
 - `GET /mlx/webhooks/last-proxy-events`
+- `POST /mlx/webhooks/refresh-proxy-state`
 
 ## Examples
 
@@ -63,9 +66,9 @@ curl http://localhost:8000/health
 Profile login using the exact Multilogin doc flow:
 
 ```bash
-curl -X POST http://localhost:8000/mlx/auth/login \
+curl -X POST http://localhost:8000/mlx/login \
   -H "Content-Type: application/json" \
-  -d '{"profile_id":"<profile-id>","password":"<password>"}'
+  -d '{"profile_id":"<profile-id>","password":"<password>","password_is_md5":false}'
 ```
 
 Fetch proxy data from the Multilogin proxy endpoint:
@@ -106,4 +109,13 @@ Webhook test:
 curl -X POST http://localhost:8000/mlx/webhooks/proxy-changed \
   -H "Content-Type: application/json" \
   -d '{"event":"proxy_changed","profile_id":"demo-profile","proxy_id":"demo-proxy"}'
+```
+
+Refresh proxy state after a webhook:
+
+```bash
+curl -X POST http://localhost:8000/mlx/webhooks/refresh-proxy-state \
+  -H "Content-Type: application/json" \
+  -H "X-MLX-Token: <token>" \
+  -d '{"profile_id":"demo-profile","extra":{}}'
 ```

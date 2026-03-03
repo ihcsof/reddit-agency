@@ -11,7 +11,7 @@ from multilogin_backend.routers.frontend import router as frontend_router
 from multilogin_backend.routers.health import router as health_router
 from multilogin_backend.routers.launcher import router as launcher_router
 from multilogin_backend.routers.mlx import router as mlx_router
-from multilogin_backend.routers.webhook import router as webhook_router
+from multilogin_backend.routers.webhooks import router as webhook_router
 from multilogin_backend.services.mlx_client import MultiloginClient
 
 
