@@ -1,0 +1,37 @@
+from __future__ import annotations
+
+from contextlib import asynccontextmanager
+
+from fastapi import FastAPI
+
+from multilogin_backend.config import get_settings
+from multilogin_backend.routers.airproxy import router as airproxy_router
+from multilogin_backend.routers.frontend import router as frontend_router
+from multilogin_backend.routers.health import router as health_router
+from multilogin_backend.routers.launcher import router as launcher_router
+from multilogin_backend.routers.mlx import router as mlx_router
+from multilogin_backend.services.mlx_client import MultiloginClient
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    settings = get_settings()
+    app.state.settings = settings
+    app.state.mlx_client = MultiloginClient(settings)
+    try:
+        yield
+    finally:
+        await app.state.mlx_client.aclose()
+
+
+def create_app() -> FastAPI:
+    app = FastAPI(title="Multilogin Backend", lifespan=lifespan)
+    app.include_router(frontend_router)
+    app.include_router(health_router)
+    app.include_router(mlx_router)
+    app.include_router(launcher_router)
+    app.include_router(airproxy_router)
+    return app
+
+
+app = create_app()
