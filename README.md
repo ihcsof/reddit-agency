@@ -3,8 +3,10 @@
 Small FastAPI backend that proxies the Multilogin X API and launcher API, with a very lightweight
 internal frontend at `/` and `/ui` for local interaction.
 
-Playwright stays installed and ready for later Multilogin-driven browser automation work.
+Playwright stays installed and ready for local browser automation work.
 The backend is isolated from any scraper startup logic and does not require `SIDESHIFT_*` env vars.
+It now includes a demo-only automation harness that is restricted to self-hosted
+`/demo/content/*` pages served by this app.
 
 ## Run
 
@@ -13,6 +15,7 @@ python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 cp .env.example .env
+playwright install chromium
 python -m multilogin_backend
 ```
 
@@ -40,6 +43,8 @@ Important variables in `.env`:
 - `GET /health`
 - `GET /`
 - `GET /ui`
+- `GET /demo/content/{content_id}`
+- `POST /demo/batch-run`
 - `POST /mlx/auth/login`
 - `POST /mlx/login`
 - `POST /mlx/profile/login`
@@ -118,4 +123,23 @@ curl -X POST http://localhost:8000/mlx/webhooks/refresh-proxy-state \
   -H "Content-Type: application/json" \
   -H "X-MLX-Token: <token>" \
   -d '{"profile_id":"demo-profile","extra":{}}'
+```
+
+Run the local demo batch runner:
+
+```bash
+curl -X POST http://localhost:8000/demo/batch-run \
+  -H "Content-Type: application/json" \
+  -d '{
+    "content_url": "/demo/content/sample-post",
+    "profile_ids": ["profile-001", "profile-002"],
+    "comments": ["First demo comment", "Second demo comment"],
+    "headless": true
+  }'
+```
+
+Open the local content target in a browser:
+
+```bash
+xdg-open http://localhost:8000/demo/content/sample-post
 ```

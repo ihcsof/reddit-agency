@@ -404,6 +404,46 @@
               <button data-action="rawRequest">Send Raw Request</button>
             </div>
           </div>
+
+          <div class="card">
+            <h2>Demo Batch Runner</h2>
+            <p>
+              Safe local harness for the Playwright runtime. It only accepts self-hosted
+              <code>/demo/content/*</code> pages served by this app.
+            </p>
+            <div class="grid">
+              <label>
+                Demo content URL
+                <input id="demoContentUrl" value="/demo/content/sample-post">
+              </label>
+              <div class="grid two">
+                <label>
+                  Headless
+                  <select id="demoHeadless">
+                    <option value="true" selected>true</option>
+                    <option value="false">false</option>
+                  </select>
+                </label>
+                <label>
+                  Quick open
+                  <button class="secondary" data-action="openDemoContent" type="button">Open Demo Page</button>
+                </label>
+              </div>
+              <label>
+                Profile IDs
+                <textarea id="demoProfileIds" placeholder="profile-001&#10;profile-002&#10;profile-003">profile-001
+profile-002
+profile-003</textarea>
+              </label>
+              <label>
+                Comments
+                <textarea id="demoComments" placeholder="One comment per line">First local demo comment
+Second local demo comment
+Third local demo comment</textarea>
+              </label>
+              <button class="warm" data-action="runDemoBatch">Run Demo Batch</button>
+            </div>
+          </div>
         </div>
 
         <div class="stack">
@@ -472,6 +512,13 @@
       function parseJson(id) {
         const value = document.getElementById(id).value.trim();
         return value ? JSON.parse(value) : null;
+      }
+
+      function parseLines(id) {
+        return document.getElementById(id).value
+          .split("\n")
+          .map((value) => value.trim())
+          .filter(Boolean);
       }
 
       async function onHealth() {
@@ -587,6 +634,25 @@
         await callApi(url, options);
       }
 
+      function onOpenDemoContent() {
+        const raw = document.getElementById("demoContentUrl").value.trim() || "/demo/content/sample-post";
+        const href = raw.startsWith("http://") || raw.startsWith("https://") ? raw : raw;
+        window.open(href, "_blank", "noopener,noreferrer");
+      }
+
+      async function onRunDemoBatch() {
+        await callApi("/demo/batch-run", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            content_url: document.getElementById("demoContentUrl").value.trim(),
+            headless: document.getElementById("demoHeadless").value === "true",
+            profile_ids: parseLines("demoProfileIds"),
+            comments: parseLines("demoComments")
+          })
+        });
+      }
+
       const actions = {
         health: onHealth,
         profileLogin: onProfileLogin,
@@ -598,7 +664,9 @@
         sendWebhook: onSendWebhook,
         loadWebhookEvents: onLoadWebhookEvents,
         refreshProxyState: onRefreshProxyState,
-        rawRequest: onRawRequest
+        rawRequest: onRawRequest,
+        openDemoContent: onOpenDemoContent,
+        runDemoBatch: onRunDemoBatch
       };
 
       document.querySelectorAll("[data-action]").forEach((button) => {

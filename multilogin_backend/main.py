@@ -6,7 +6,9 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
 from multilogin_backend.config import get_settings
+from multilogin_backend.playwright_runtime import DemoAutomationRuntime
 from multilogin_backend.routers.airproxy import router as airproxy_router
+from multilogin_backend.routers.demo import router as demo_router
 from multilogin_backend.routers.frontend import router as frontend_router
 from multilogin_backend.routers.health import router as health_router
 from multilogin_backend.routers.launcher import router as launcher_router
@@ -20,10 +22,12 @@ async def lifespan(app: FastAPI):
     settings = get_settings()
     app.state.settings = settings
     app.state.mlx_client = MultiloginClient(settings)
+    app.state.demo_runtime = DemoAutomationRuntime()
     app.state.proxy_events = deque(maxlen=100)
     try:
         yield
     finally:
+        await app.state.demo_runtime.aclose()
         await app.state.mlx_client.aclose()
 
 
@@ -31,6 +35,7 @@ def create_app() -> FastAPI:
     app = FastAPI(title="Multilogin API Proxy", lifespan=lifespan)
     app.include_router(frontend_router)
     app.include_router(health_router)
+    app.include_router(demo_router)
     app.include_router(mlx_router)
     app.include_router(webhook_router)
     app.include_router(launcher_router)
