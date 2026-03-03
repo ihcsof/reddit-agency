@@ -10,9 +10,7 @@ SHARE_BUTTON = (
     'button:has(svg[icon-name="share"]), '
     'button:has(.icon-share), '
     '[role="button"]:has(svg[icon-name="share"]), '
-    '[role="button"]:has(.icon-share), '
-    'svg[icon-name="share"], '
-    '.icon-share'
+    '[role="button"]:has(.icon-share)'
 )
 
 COPY_LINK_OPTION = ".share-menu-copy-link-option"

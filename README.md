@@ -71,6 +71,12 @@ Important values in `.env`:
 - `AIRPROXY_PORT=10306`
 - `AIRPROXY_USERNAME=interview_scouter`
 - `AIRPROXY_PASSWORD=` required for `/airproxy/default-proxy`
+- `AIRPROXY_CHANGE_IP_URL=` required for IP rotation in `python -m app.runner`
+- `AIRPROXY_MIN_DEBOUNCE_S=5` minimum wait between AirProxy rotation and verification
+
+The runner also requires `MLX_PROFILE_START_PATH`, `MLX_PROFILE_STOP_PATH`, and `MLX_WS_FIELD`
+to be set correctly in `.env`, otherwise profile lifecycle start/stop and Playwright websocket
+attachment will fail.
 
 ## API Routes
 

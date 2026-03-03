@@ -46,6 +46,8 @@ class Settings:
     airproxy_port: int = _get_int("AIRPROXY_PORT", 10306)
     airproxy_username: str = os.getenv("AIRPROXY_USERNAME", "interview_scouter")
     airproxy_password: str = os.getenv("AIRPROXY_PASSWORD", "")
+    airproxy_change_ip_url: str = os.getenv("AIRPROXY_CHANGE_IP_URL", "")
+    airproxy_min_debounce_s: float = float(os.getenv("AIRPROXY_MIN_DEBOUNCE_S", "5"))
 
 
 @lru_cache(maxsize=1)

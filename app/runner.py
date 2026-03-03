@@ -113,6 +113,7 @@ async def _run_unit(
         type_comment,
         wait_for_hydration,
     )
+    from multilogin_backend.config import get_settings
 
     started_at = _iso_timestamp()
     steps = {
@@ -128,6 +129,7 @@ async def _run_unit(
         "started_at": started_at,
         "finished_at": started_at,
         "error": None,
+        "skipped": False,
     }
 
     browser: Browser | None = None
@@ -142,11 +144,18 @@ async def _run_unit(
         await limiter.acquire()
 
         rotation = await airproxy.rotate_ip_and_verify(
-            min_debounce_s=5,
+            min_debounce_s=get_settings().airproxy_min_debounce_s,
             max_retries=1,
         )
         if rotation.get("status") == "skipped":
-            raise RuntimeError(str(rotation.get("reason") or "ip_not_changed"))
+            steps["rotate_ip"] = "skip"
+            steps["comment"] = "skip"
+            steps["vote"] = "skip"
+            steps["share"] = "skip"
+            result["error"] = None
+            result["skipped"] = True
+            result["skip_reason"] = str(rotation.get("reason") or "ip_not_changed")
+            return result
 
         steps["rotate_ip"] = "ok"
 

@@ -14,12 +14,9 @@ from typing import Any
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 import httpx
+from multilogin_backend.config import get_settings
 
 
-DEFAULT_CHANGE_IP_URL = (
-    "https://airproxy.io/api/proxy/change_ip/?format=json&id=32&key="
-    "e2rw043RyMVYzKsRGtXHPkQRoAGSOPMk"
-)
 DEFAULT_TIMEOUT_S = 30.0
 DEFAULT_RETRY_AFTER_S = 5.0
 
@@ -44,11 +41,17 @@ class AirProxyClient:
     def __init__(
         self,
         *,
-        change_ip_url: str = DEFAULT_CHANGE_IP_URL,
+        change_ip_url: str | None = None,
         timeout_s: float = DEFAULT_TIMEOUT_S,
         client: httpx.AsyncClient | None = None,
     ) -> None:
-        self._change_ip_url = change_ip_url
+        resolved_change_ip_url = (
+            change_ip_url if change_ip_url is not None else get_settings().airproxy_change_ip_url
+        ).strip()
+        if not resolved_change_ip_url:
+            raise ValueError("AIRPROXY_CHANGE_IP_URL is required")
+
+        self._change_ip_url = resolved_change_ip_url
         self._owns_client = client is None
         self._client = client or httpx.AsyncClient(timeout=timeout_s)
 
@@ -62,15 +65,6 @@ class AirProxyClient:
     async def __aexit__(self, exc_type: object, exc: object, tb: object) -> None:
         await self.aclose()
 
-    async def change_ip(self) -> dict[str, Any]:
-        response = await self._request_change_ip()
-        response.raise_for_status()
-
-        payload = response.json()
-        if not isinstance(payload, dict):
-            raise ValueError("AirProxy response must be a JSON object")
-        return payload
-
     async def rotate_ip_and_verify(
         self,
         *,
@@ -81,7 +75,7 @@ class AirProxyClient:
         debounce_s = max(0.0, min_debounce_s)
 
         while True:
-            payload = await self.change_ip()
+            payload = await self.change_ip(max_retries=max_retries)
             await asyncio.sleep(debounce_s)
 
             result = dict(payload)
@@ -111,19 +105,31 @@ class AirProxyClient:
                 redact_url(self._change_ip_url),
             )
 
-    async def _request_change_ip(self) -> httpx.Response:
-        response = await self._client.get(self._change_ip_url)
-        if response.status_code != 429:
-            return response
+    async def change_ip(self, *, max_retries: int = 1) -> dict[str, Any]:
+        response = await self._request_change_ip(max_retries=max_retries)
+        response.raise_for_status()
 
-        retry_after_s = self._get_retry_after_seconds(response.headers)
-        logger.warning(
-            "AirProxy rate-limited change_ip on %s; retrying in %.2fs",
-            redact_url(self._change_ip_url),
-            retry_after_s,
-        )
-        await asyncio.sleep(retry_after_s)
-        return await self._client.get(self._change_ip_url)
+        payload = response.json()
+        if not isinstance(payload, dict):
+            raise ValueError("AirProxy response must be a JSON object")
+        return payload
+
+    async def _request_change_ip(self, *, max_retries: int = 1) -> httpx.Response:
+        attempt = 0
+
+        while True:
+            response = await self._client.get(self._change_ip_url)
+            if response.status_code != 429 or attempt >= max_retries:
+                return response
+
+            retry_after_s = self._get_retry_after_seconds(response.headers)
+            logger.warning(
+                "AirProxy rate-limited change_ip on %s; retrying in %.2fs",
+                redact_url(self._change_ip_url),
+                retry_after_s,
+            )
+            await asyncio.sleep(retry_after_s)
+            attempt += 1
 
     def _get_retry_after_seconds(self, headers: Mapping[str, str]) -> float:
         raw_value = headers.get("Retry-After")
