@@ -8,7 +8,7 @@ from fastapi.responses import FileResponse
 
 router = APIRouter(tags=["frontend"])
 
-FRONTEND_FILE = Path(__file__).resolve().parent.parent / "frontend" / "index.html"
+FRONTEND_FILE = Path(__file__).resolve().parents[2] / "frontend" / "index.html"
 
 
 @router.get("/", include_in_schema=False)

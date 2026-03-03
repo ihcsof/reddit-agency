@@ -3,11 +3,11 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Multilogin API Proxy Console</title>
+    <title>Multilogin Console</title>
     <style>
       :root {
         --paper: #f7f2ea;
-        --panel: rgba(255, 251, 244, 0.92);
+        --panel: rgba(255, 251, 244, 0.94);
         --panel-strong: #fffdf8;
         --ink: #171512;
         --muted: #70675d;
@@ -235,31 +235,34 @@
   <body>
     <main class="shell">
       <section class="hero">
-        <h1>Multilogin API Proxy Console</h1>
+        <h1>Multilogin Console</h1>
         <p>
-          Local-only control surface for the FastAPI backend. The source of truth for proxy state is
-          Multilogin's proxy-data endpoint, while webhook calls are treated as notifications and
-          cached locally for inspection.
+          Static frontend for local interaction with the FastAPI backend. Serve this directory on
+          its own during frontend work, or open the same file through the backend at <code>/</code>.
         </p>
         <div class="meta">
-          <span class="pill"><code>python -m multilogin_backend</code></span>
-          <span class="pill">Token forwarded as <code>X-MLX-Token</code></span>
-          <span class="pill">Playwright stays installed for later runtime work</span>
+          <span class="pill"><code>frontend/</code> static UI</span>
+          <span class="pill"><code>multilogin_backend/</code> FastAPI API</span>
+          <span class="pill"><code>app/</code> orchestration runner</span>
         </div>
       </section>
 
       <section class="layout">
         <div class="stack">
           <div class="card">
-            <h2>Session</h2>
-            <p>Keep a token in local storage and reuse it across requests.</p>
+            <h2>Workspace</h2>
+            <p>Choose the backend base URL and keep the auth token in local storage.</p>
             <div class="grid">
+              <label>
+                Backend base URL
+                <input id="apiBase" placeholder="http://127.0.0.1:8000">
+              </label>
               <label>
                 Stored Multilogin token
                 <textarea id="sessionToken" placeholder="Paste a bearer token here"></textarea>
               </label>
               <div class="row">
-                <button id="saveToken">Save Token</button>
+                <button id="saveWorkspace">Save Settings</button>
                 <button id="clearToken" class="secondary">Clear Token</button>
                 <button data-action="health" class="secondary">Health</button>
               </div>
@@ -288,11 +291,11 @@
 
           <div class="card">
             <h2>Proxy State</h2>
-            <p>Exact doc-anchored flow: <code>GET /mlx/proxy/user</code> to upstream <code>https://profile-proxy.multilogin.com/v1/user</code>.</p>
+            <p>Inspect Multilogin proxy data and inject the default AirProxy payload into a JSON object.</p>
             <div class="grid">
               <div class="row">
                 <button data-action="fetchProxy">Fetch Proxy Data</button>
-                <button data-action="defaultProxy" class="secondary">Default Airproxy</button>
+                <button data-action="defaultProxy" class="secondary">Default AirProxy</button>
               </div>
               <label>
                 Inject default proxy into payload at path
@@ -339,7 +342,7 @@
 
           <div class="card">
             <h2>Webhook Tools</h2>
-            <p>Local webhook receiver for proxy change notifications plus an event buffer viewer.</p>
+            <p>Send a local webhook notification and inspect the recent event buffer.</p>
             <div class="grid">
               <label>
                 Optional webhook secret
@@ -349,8 +352,8 @@
                 Test webhook payload
                 <textarea id="webhookPayload">{
   "event": "proxy_changed",
-  "profile_id": "demo-profile-id",
-  "proxy_id": "demo-proxy-id"
+  "profile_id": "profile-id",
+  "proxy_id": "proxy-id"
 }</textarea>
               </label>
               <div class="row">
@@ -363,7 +366,7 @@
 
           <div class="card">
             <h2>Raw Requests</h2>
-            <p>Use <code>/mlx/raw/*</code> or <code>/launcher/raw/*</code> without leaving the page.</p>
+            <p>Call <code>/mlx/raw/*</code>, <code>/launcher/raw/*</code>, or any local backend route directly.</p>
             <div class="grid">
               <div class="grid two">
                 <label>
@@ -404,46 +407,6 @@
               <button data-action="rawRequest">Send Raw Request</button>
             </div>
           </div>
-
-          <div class="card">
-            <h2>Demo Batch Runner</h2>
-            <p>
-              Safe local harness for the Playwright runtime. It only accepts self-hosted
-              <code>/demo/content/*</code> pages served by this app.
-            </p>
-            <div class="grid">
-              <label>
-                Demo content URL
-                <input id="demoContentUrl" value="/demo/content/sample-post">
-              </label>
-              <div class="grid two">
-                <label>
-                  Headless
-                  <select id="demoHeadless">
-                    <option value="true" selected>true</option>
-                    <option value="false">false</option>
-                  </select>
-                </label>
-                <label>
-                  Quick open
-                  <button class="secondary" data-action="openDemoContent" type="button">Open Demo Page</button>
-                </label>
-              </div>
-              <label>
-                Profile IDs
-                <textarea id="demoProfileIds" placeholder="profile-001&#10;profile-002&#10;profile-003">profile-001
-profile-002
-profile-003</textarea>
-              </label>
-              <label>
-                Comments
-                <textarea id="demoComments" placeholder="One comment per line">First local demo comment
-Second local demo comment
-Third local demo comment</textarea>
-              </label>
-              <button class="warm" data-action="runDemoBatch">Run Demo Batch</button>
-            </div>
-          </div>
         </div>
 
         <div class="stack">
@@ -453,7 +416,7 @@ Third local demo comment</textarea>
               <div class="status" id="responseStatus">Idle</div>
             </div>
             <div class="hint">
-              Upstream non-2xx responses are passed through with the upstream status code and body.
+              Non-2xx upstream responses are forwarded with their status code and body.
             </div>
             <pre id="responseBody">No request yet.</pre>
           </div>
@@ -463,15 +426,32 @@ Third local demo comment</textarea>
 
     <script>
       const tokenStorageKey = "mlx-proxy-console-token";
+      const apiBaseStorageKey = "mlx-proxy-console-api-base";
       const responseStatus = document.getElementById("responseStatus");
       const responseBody = document.getElementById("responseBody");
       const sessionToken = document.getElementById("sessionToken");
+      const apiBaseInput = document.getElementById("apiBase");
 
-      function loadStoredToken() {
+      function normalizeApiBase(rawValue) {
+        const trimmed = rawValue.trim();
+        if (!trimmed) {
+          if (window.location.protocol === "http:" || window.location.protocol === "https:") {
+            return window.location.origin;
+          }
+          return "http://127.0.0.1:8000";
+        }
+        return trimmed.replace(/\/+$/, "");
+      }
+
+      function loadWorkspace() {
+        const storedApiBase = localStorage.getItem(apiBaseStorageKey);
+        const queryApiBase = new URLSearchParams(window.location.search).get("apiBase");
+        apiBaseInput.value = queryApiBase || storedApiBase || "";
         sessionToken.value = localStorage.getItem(tokenStorageKey) || "";
       }
 
-      function saveStoredToken() {
+      function saveWorkspace() {
+        localStorage.setItem(apiBaseStorageKey, normalizeApiBase(apiBaseInput.value));
         localStorage.setItem(tokenStorageKey, sessionToken.value.trim());
       }
 
@@ -498,9 +478,18 @@ Third local demo comment</textarea>
         return headers;
       }
 
-      async function callApi(url, options = {}) {
+      function resolveApiUrl(path) {
+        if (path.startsWith("http://") || path.startsWith("https://")) {
+          return path;
+        }
+        const apiBase = normalizeApiBase(apiBaseInput.value);
+        return `${apiBase}${path.startsWith("/") ? path : `/${path}`}`;
+      }
+
+      async function callApi(path, options = {}) {
+        saveWorkspace();
         setResponse("Loading", "Request in flight...", true);
-        const response = await fetch(url, options);
+        const response = await fetch(resolveApiUrl(path), options);
         const contentType = response.headers.get("content-type") || "";
         const payload = contentType.includes("application/json")
           ? await response.json()
@@ -512,13 +501,6 @@ Third local demo comment</textarea>
       function parseJson(id) {
         const value = document.getElementById(id).value.trim();
         return value ? JSON.parse(value) : null;
-      }
-
-      function parseLines(id) {
-        return document.getElementById(id).value
-          .split("\n")
-          .map((value) => value.trim())
-          .filter(Boolean);
       }
 
       async function onHealth() {
@@ -634,25 +616,6 @@ Third local demo comment</textarea>
         await callApi(url, options);
       }
 
-      function onOpenDemoContent() {
-        const raw = document.getElementById("demoContentUrl").value.trim() || "/demo/content/sample-post";
-        const href = raw.startsWith("http://") || raw.startsWith("https://") ? raw : raw;
-        window.open(href, "_blank", "noopener,noreferrer");
-      }
-
-      async function onRunDemoBatch() {
-        await callApi("/demo/batch-run", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            content_url: document.getElementById("demoContentUrl").value.trim(),
-            headless: document.getElementById("demoHeadless").value === "true",
-            profile_ids: parseLines("demoProfileIds"),
-            comments: parseLines("demoComments")
-          })
-        });
-      }
-
       const actions = {
         health: onHealth,
         profileLogin: onProfileLogin,
@@ -664,9 +627,7 @@ Third local demo comment</textarea>
         sendWebhook: onSendWebhook,
         loadWebhookEvents: onLoadWebhookEvents,
         refreshProxyState: onRefreshProxyState,
-        rawRequest: onRawRequest,
-        openDemoContent: onOpenDemoContent,
-        runDemoBatch: onRunDemoBatch
+        rawRequest: onRawRequest
       };
 
       document.querySelectorAll("[data-action]").forEach((button) => {
@@ -679,10 +640,10 @@ Third local demo comment</textarea>
         });
       });
 
-      document.getElementById("saveToken").addEventListener("click", saveStoredToken);
+      document.getElementById("saveWorkspace").addEventListener("click", saveWorkspace);
       document.getElementById("clearToken").addEventListener("click", clearStoredToken);
 
-      loadStoredToken();
+      loadWorkspace();
     </script>
   </body>
 </html>

@@ -17,11 +17,20 @@ def _get_int(name: str, default: int) -> int:
     return int(value)
 
 
+def _get_csv(name: str, default: str) -> tuple[str, ...]:
+    raw_value = os.getenv(name, default)
+    return tuple(part.strip() for part in raw_value.split(",") if part.strip())
+
+
 @dataclass(frozen=True)
 class Settings:
     app_host: str = os.getenv("APP_HOST", "0.0.0.0")
     app_port: int = _get_int("APP_PORT", 8000)
     app_env: str = os.getenv("APP_ENV", "dev")
+    app_cors_origins: tuple[str, ...] = _get_csv(
+        "APP_CORS_ORIGINS",
+        "http://127.0.0.1:3000,http://localhost:3000",
+    )
     mlx_base_url: str = os.getenv("MLX_BASE_URL", "https://api.multilogin.com").rstrip("/")
     mlx_launcher_base_url: str = os.getenv(
         "MLX_LAUNCHER_BASE_URL",

@@ -1,14 +1,17 @@
-# Multilogin API Proxy
+# Multilogin Console
 
-Small FastAPI backend that proxies the Multilogin X API and launcher API, with a very lightweight
-internal frontend at `/` and `/ui` for local interaction.
+This repository now has a clean split between the static frontend, the FastAPI backend, and the
+automation runner:
 
-Playwright stays installed and ready for local browser automation work.
-The backend is isolated from any scraper startup logic and does not require `SIDESHIFT_*` env vars.
-It now includes a demo-only automation harness that is restricted to self-hosted
-`/demo/content/*` pages served by this app.
+- `frontend/`: static UI for local API interaction
+- `multilogin_backend/`: FastAPI backend and upstream proxy routes
+- `app/`: orchestration runner and UI automation helpers
 
-## Run
+The old self-hosted fake-content harness has been removed from the current codebase.
+
+## Local Run
+
+Create a virtualenv and install dependencies:
 
 ```bash
 python3 -m venv .venv
@@ -16,38 +19,64 @@ source .venv/bin/activate
 pip install -r requirements.txt
 cp .env.example .env
 playwright install chromium
-python -m multilogin_backend
 ```
 
-Then open `http://127.0.0.1:8000/`.
+### Backend
+
+Run the backend on `http://127.0.0.1:8000`:
+
+```bash
+python3 -m multilogin_backend
+```
+
+The backend serves the same static frontend at:
+
+- `http://127.0.0.1:8000/`
+- `http://127.0.0.1:8000/ui`
+
+### Frontend
+
+If you want to run the frontend separately while developing UI changes:
+
+```bash
+python3 -m http.server 3000 --directory frontend
+```
+
+Then open `http://127.0.0.1:3000` and set the UI's `Backend base URL` field to
+`http://127.0.0.1:8000`.
+
+The backend already allows local CORS origins from `.env.example` via:
+
+```env
+APP_CORS_ORIGINS=http://127.0.0.1:3000,http://localhost:3000
+```
 
 ## Environment
 
-Important variables in `.env`:
+Important values in `.env`:
 
 - `APP_HOST=0.0.0.0`
 - `APP_PORT=8000`
 - `APP_ENV=dev`
+- `APP_CORS_ORIGINS=http://127.0.0.1:3000,http://localhost:3000`
 - `MLX_BASE_URL=https://api.multilogin.com`
 - `MLX_LAUNCHER_BASE_URL=https://launcher.mlx.yt:45001/api/v1`
 - `MLX_TIMEOUT_S=30`
 - `MLX_TOKEN=` optional default bearer token
-- `MLX_PROFILE_START_PATH=` required for the lifecycle client; can be a full URL or a launcher-relative path such as `/profile/start`
-- `MLX_PROFILE_STOP_PATH=` required for the lifecycle client; can be a full URL or a launcher-relative path such as `/profile/stop`
-- `MLX_WS_FIELD=wsUrl` field name, or dotted JSON path, used to extract the websocket endpoint from the start-profile response
+- `MLX_PROFILE_START_PATH=` required for the lifecycle client
+- `MLX_PROFILE_STOP_PATH=` required for the lifecycle client
+- `MLX_WS_FIELD=wsUrl` field name or dotted path used to read the websocket URL
 - `MLX_WEBHOOK_SECRET=` optional shared secret for `X-Webhook-Secret`
 - `AIRPROXY_HOST=s1.airproxy.io`
 - `AIRPROXY_PORT=10306`
 - `AIRPROXY_USERNAME=interview_scouter`
 - `AIRPROXY_PASSWORD=` required for `/airproxy/default-proxy`
 
-## Routes
+## API Routes
 
 - `GET /health`
 - `GET /`
 - `GET /ui`
-- `GET /demo/content/{content_id}`
-- `POST /demo/batch-run`
 - `POST /mlx/auth/login`
 - `POST /mlx/login`
 - `POST /mlx/profile/login`
@@ -63,86 +92,16 @@ Important variables in `.env`:
 - `GET /mlx/webhooks/last-proxy-events`
 - `POST /mlx/webhooks/refresh-proxy-state`
 
-## Examples
+## Runner
 
-Health:
-
-```bash
-curl http://localhost:8000/health
-```
-
-Profile login using the exact Multilogin doc flow:
+Run the orchestration batch locally:
 
 ```bash
-curl -X POST http://localhost:8000/mlx/login \
-  -H "Content-Type: application/json" \
-  -d '{"profile_id":"<profile-id>","password":"<password>","password_is_md5":false}'
+python3 -m app.runner \
+  --target-url "https://www.reddit.com/r/test/comments/example/post/" \
+  --profiles profile-001 profile-002 \
+  --comments "First local run comment" "Second local run comment"
 ```
 
-Fetch proxy data from the Multilogin proxy endpoint:
-
-```bash
-curl -H "X-MLX-Token: <token>" \
-  http://localhost:8000/mlx/proxy/user
-```
-
-Profile search wrapper:
-
-```bash
-curl -X POST http://localhost:8000/mlx/profile/search \
-  -H "Content-Type: application/json" \
-  -H "X-MLX-Token: <token>" \
-  -d '{"limit":20,"offset":0,"search_text":"","storage_type":"all","order_by":"created_at","sort":"asc"}'
-```
-
-Raw passthrough:
-
-```bash
-curl -X POST http://localhost:8000/mlx/raw/profile/search \
-  -H "Content-Type: application/json" \
-  -H "X-MLX-Token: <token>" \
-  -d '{"limit":10,"offset":0}'
-```
-
-Launcher passthrough:
-
-```bash
-curl -H "X-MLX-Token: <token>" \
-  http://localhost:8000/launcher/raw/api/v1/version
-```
-
-Webhook test:
-
-```bash
-curl -X POST http://localhost:8000/mlx/webhooks/proxy-changed \
-  -H "Content-Type: application/json" \
-  -d '{"event":"proxy_changed","profile_id":"demo-profile","proxy_id":"demo-proxy"}'
-```
-
-Refresh proxy state after a webhook:
-
-```bash
-curl -X POST http://localhost:8000/mlx/webhooks/refresh-proxy-state \
-  -H "Content-Type: application/json" \
-  -H "X-MLX-Token: <token>" \
-  -d '{"profile_id":"demo-profile","extra":{}}'
-```
-
-Run the local demo batch runner:
-
-```bash
-curl -X POST http://localhost:8000/demo/batch-run \
-  -H "Content-Type: application/json" \
-  -d '{
-    "content_url": "/demo/content/sample-post",
-    "profile_ids": ["profile-001", "profile-002"],
-    "comments": ["First demo comment", "Second demo comment"],
-    "headless": true
-  }'
-```
-
-Open the local content target in a browser:
-
-```bash
-xdg-open http://localhost:8000/demo/content/sample-post
-```
+The runner uses the existing Multilogin and AirProxy settings from `.env`, enforces a global
+`100` units per `60` seconds rate limit, and prints a JSON array of per-unit results.
