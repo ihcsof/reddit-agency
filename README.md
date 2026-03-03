@@ -1,13 +1,10 @@
 # Multilogin Console
 
-This repository now has a clean split between the static frontend, the FastAPI backend, and the
-automation runner:
+This repository includes a static frontend, a FastAPI backend, and an automation runner:
 
 - `frontend/`: static UI for local API interaction
 - `multilogin_backend/`: FastAPI backend and upstream proxy routes
 - `app/`: orchestration runner and UI automation helpers
-
-The old self-hosted fake-content harness has been removed from the current codebase.
 
 ## Local Run
 
@@ -45,7 +42,7 @@ python3 -m http.server 3000 --directory frontend
 Then open `http://127.0.0.1:3000` and set the UI's `Backend base URL` field to
 `http://127.0.0.1:8000`.
 
-The backend already allows local CORS origins from `.env.example` via:
+The backend allows local CORS origins from `.env.example` via:
 
 ```env
 APP_CORS_ORIGINS=http://127.0.0.1:3000,http://localhost:3000
