@@ -32,6 +32,9 @@ Important variables in `.env`:
 - `MLX_LAUNCHER_BASE_URL=https://launcher.mlx.yt:45001/api/v1`
 - `MLX_TIMEOUT_S=30`
 - `MLX_TOKEN=` optional default bearer token
+- `MLX_PROFILE_START_PATH=` required for the lifecycle client; can be a full URL or a launcher-relative path such as `/profile/start`
+- `MLX_PROFILE_STOP_PATH=` required for the lifecycle client; can be a full URL or a launcher-relative path such as `/profile/stop`
+- `MLX_WS_FIELD=wsUrl` field name, or dotted JSON path, used to extract the websocket endpoint from the start-profile response
 - `MLX_WEBHOOK_SECRET=` optional shared secret for `X-Webhook-Secret`
 - `AIRPROXY_HOST=s1.airproxy.io`
 - `AIRPROXY_PORT=10306`

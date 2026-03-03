@@ -1,26 +1,23 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
-from typing import Literal
-from urllib.parse import urlsplit
 
 import httpx
 from fastapi import HTTPException
 from fastapi.responses import JSONResponse, Response
 
 from multilogin_backend.config import Settings
-
-
-UpstreamName = Literal["mlx", "launcher"]
+from multilogin_backend.services.upstream_http import (
+    UpstreamHttpClient,
+    UpstreamName,
+    UpstreamRequestError,
+)
 
 
 class MultiloginClient:
     def __init__(self, settings: Settings) -> None:
         self._settings = settings
-        self._client = httpx.AsyncClient(
-            timeout=settings.mlx_timeout_s,
-            follow_redirects=True,
-        )
+        self._client = UpstreamHttpClient(settings)
 
     async def aclose(self) -> None:
         await self._client.aclose()
@@ -39,24 +36,20 @@ class MultiloginClient:
     ) -> Response:
         request_headers = self._sanitize_headers(headers)
         resolved_token = self._resolve_token(token=token, headers=headers)
-        if resolved_token:
-            request_headers["Authorization"] = f"Bearer {resolved_token}"
-
-        url = self._build_url(url_or_path=url_or_path, upstream=upstream)
 
         try:
             response = await self._client.request(
                 method=method.upper(),
-                url=url,
+                url_or_path=url_or_path,
+                upstream=upstream,
+                token=resolved_token,
                 params=params,
                 json=json,
                 content=content,
                 headers=request_headers,
             )
-        except httpx.TimeoutException as exc:
-            raise HTTPException(status_code=504, detail="Upstream request timed out") from exc
-        except httpx.HTTPError as exc:
-            raise HTTPException(status_code=502, detail="Failed to reach upstream service") from exc
+        except UpstreamRequestError as exc:
+            raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
 
         if response.is_success:
             return self._build_response(response)
@@ -65,23 +58,6 @@ class MultiloginClient:
             status_code=response.status_code,
             detail=self._extract_error_detail(response),
         )
-
-    def _build_url(self, *, url_or_path: str, upstream: UpstreamName) -> str:
-        if url_or_path.startswith("http://") or url_or_path.startswith("https://"):
-            return url_or_path
-
-        base_url = (
-            self._settings.mlx_base_url
-            if upstream == "mlx"
-            else self._settings.mlx_launcher_base_url
-        )
-        normalized_path = url_or_path if url_or_path.startswith("/") else f"/{url_or_path}"
-
-        if upstream == "launcher" and normalized_path.startswith("/api/"):
-            parts = urlsplit(base_url)
-            return f"{parts.scheme}://{parts.netloc}{normalized_path}"
-
-        return f"{base_url}{normalized_path}"
 
     def _resolve_token(
         self,

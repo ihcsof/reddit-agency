@@ -27,8 +27,11 @@ class Settings:
         "MLX_LAUNCHER_BASE_URL",
         "https://launcher.mlx.yt:45001/api/v1",
     ).rstrip("/")
-    mlx_token: str = os.getenv("MLX_TOKEN", "")
+    mlx_token: str | None = os.getenv("MLX_TOKEN") or None
     mlx_timeout_s: int = _get_int("MLX_TIMEOUT_S", 30)
+    mlx_profile_start_path: str = os.getenv("MLX_PROFILE_START_PATH", "").strip()
+    mlx_profile_stop_path: str = os.getenv("MLX_PROFILE_STOP_PATH", "").strip()
+    mlx_ws_field: str = os.getenv("MLX_WS_FIELD", "wsUrl").strip() or "wsUrl"
     mlx_webhook_secret: str = os.getenv("MLX_WEBHOOK_SECRET", "")
     airproxy_host: str = os.getenv("AIRPROXY_HOST", "s1.airproxy.io")
     airproxy_port: int = _get_int("AIRPROXY_PORT", 10306)
