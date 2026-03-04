@@ -43,7 +43,9 @@ class UpstreamHttpClient:
         headers: Mapping[str, str] | None = None,
     ) -> httpx.Response:
         request_headers = dict(headers or {})
-        resolved_token = token or self._settings.mlx_token
+        resolved_token = token if token is not None else (
+            self._settings.mlx_token if upstream == "mlx" else None
+        )
         if resolved_token:
             request_headers["Authorization"] = f"Bearer {resolved_token}"
 

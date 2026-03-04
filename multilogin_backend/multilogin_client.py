@@ -412,7 +412,7 @@ class MultiloginClient:
             content=content,
             headers=headers,
         )
-        if response.status_code != 401:
+        if upstream != "mlx" or response.status_code != 401:
             return response
 
         await self.refresh_token()
@@ -446,7 +446,7 @@ class MultiloginClient:
             method,
             url_or_path,
             upstream=upstream,
-            token=token or self.token,
+            token=(token or self.token) if upstream == "mlx" else None,
             params=params,
             json=json,
             content=content,

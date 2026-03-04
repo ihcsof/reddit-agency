@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import asyncio
 from collections.abc import Mapping
+from typing import Literal
 
 import httpx
 from fastapi import HTTPException
@@ -14,10 +16,15 @@ from multilogin_backend.services.upstream_http import (
 )
 
 
+TokenSource = Literal["header", "param", "settings", "none"]
+
+
 class MultiloginClient:
     def __init__(self, settings: Settings) -> None:
         self._settings = settings
         self._client = UpstreamHttpClient(settings)
+        self.token = settings.mlx_token
+        self._refresh_lock = asyncio.Lock()
 
     async def aclose(self) -> None:
         await self._client.aclose()
@@ -36,7 +43,7 @@ class MultiloginClient:
     ) -> Response:
         request_headers = self._sanitize_headers(headers)
         request_headers.setdefault("Accept-Encoding", "identity")
-        resolved_token = self._resolve_token(token=token, headers=headers)
+        resolved_token, token_source = self._resolve_token(token=token, headers=headers)
 
         try:
             response = await self._client.request(
@@ -52,6 +59,32 @@ class MultiloginClient:
         except UpstreamRequestError as exc:
             raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
 
+        if (
+            upstream == "mlx"
+            and token_source == "settings"
+            and response.status_code == 401
+        ):
+            await self.refresh_token()
+            try:
+                response = await self._client.request(
+                    method=method.upper(),
+                    url_or_path=url_or_path,
+                    upstream=upstream,
+                    token=self.token,
+                    params=params,
+                    json=json,
+                    content=content,
+                    headers=request_headers,
+                )
+            except UpstreamRequestError as exc:
+                raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
+
+            if response.status_code == 401:
+                raise HTTPException(
+                    status_code=401,
+                    detail="Multilogin token invalid/expired even after refresh",
+                )
+
         if response.is_success:
             return self._build_response(response)
 
@@ -60,12 +93,66 @@ class MultiloginClient:
             detail=self._extract_error_detail(response),
         )
 
+    async def refresh_token(self) -> str:
+        async with self._refresh_lock:
+            if not self._settings.mlx_refresh_token:
+                raise HTTPException(status_code=500, detail="MLX_REFRESH_TOKEN is required")
+            if not self._settings.mlx_email:
+                raise HTTPException(status_code=500, detail="MLX_EMAIL is required")
+            if not self._settings.mlx_workspace_id:
+                raise HTTPException(status_code=500, detail="MLX_WORKSPACE_ID is required")
+            if not self.token:
+                raise HTTPException(status_code=500, detail="MLX_TOKEN is required")
+
+            payload = {
+                "email": self._settings.mlx_email,
+                "refresh_token": self._settings.mlx_refresh_token,
+                "workspace_id": self._settings.mlx_workspace_id,
+            }
+
+            try:
+                response = await self._client._client.post(
+                    f"{self._settings.mlx_base_url}/user/refresh_token",
+                    json=payload,
+                    headers={
+                        "Authorization": f"Bearer {self.token}",
+                        "Content-Type": "application/json",
+                    },
+                )
+            except httpx.HTTPError as exc:
+                raise HTTPException(
+                    status_code=502,
+                    detail="Failed refreshing MLX token: failed to reach upstream service",
+                ) from exc
+
+            if response.status_code != 200:
+                detail = self._safe_text(response).strip() or f"upstream status {response.status_code}"
+                raise HTTPException(
+                    status_code=502,
+                    detail=f"Failed refreshing MLX token: {detail}",
+                )
+
+            try:
+                data = response.json()
+            except ValueError as exc:
+                raise HTTPException(
+                    status_code=502,
+                    detail="Token refresh response was not valid JSON",
+                ) from exc
+
+            new_token = data.get("data", {}).get("token") if isinstance(data, Mapping) else None
+            if not new_token:
+                raise HTTPException(status_code=502, detail="Token refresh response missing token")
+
+            self.token = str(new_token)
+            return self.token
+
     def _resolve_token(
         self,
         *,
         token: str | None,
         headers: Mapping[str, str] | None,
-    ) -> str | None:
+    ) -> tuple[str | None, TokenSource]:
         header_token = None
         if headers is not None:
             for key, value in headers.items():
@@ -74,12 +161,12 @@ class MultiloginClient:
                     break
 
         if header_token:
-            return header_token
+            return header_token, "header"
         if token:
-            return token
-        if self._settings.mlx_token:
-            return self._settings.mlx_token
-        return None
+            return token, "param"
+        if self.token:
+            return self.token, "settings"
+        return None, "none"
 
     def _sanitize_headers(self, headers: Mapping[str, str] | None) -> dict[str, str]:
         if headers is None:

@@ -115,6 +115,7 @@ async def _run_unit(
     comment_text: str,
 ) -> dict[str, Any]:
     from app.ui_actions import (
+        ActionSkipped,
         click_share_and_copy_link,
         click_vote,
         submit_comment,
@@ -188,17 +189,26 @@ async def _run_unit(
         await wait_for_hydration(page)
 
         current_step = "comment"
-        await type_comment(page, comment_text)
-        await submit_comment(page)
-        steps["comment"] = "ok"
+        try:
+            await type_comment(page, comment_text)
+            await submit_comment(page)
+            steps["comment"] = "ok"
+        except ActionSkipped:
+            steps["comment"] = "skip"
 
         current_step = "vote"
-        await click_vote(page)
-        steps["vote"] = "ok"
+        try:
+            await click_vote(page)
+            steps["vote"] = "ok"
+        except ActionSkipped:
+            steps["vote"] = "skip"
 
         current_step = "share"
-        clipboard_text = await click_share_and_copy_link(page)
-        steps["share"] = "ok"
+        try:
+            clipboard_text = await click_share_and_copy_link(page)
+            steps["share"] = "ok"
+        except ActionSkipped:
+            steps["share"] = "skip"
     except Exception as exc:
         error = _build_error(current_step, exc)
     finally:

@@ -362,27 +362,6 @@
 
           <div class="card">
             <div class="section-kicker">Step 2</div>
-            <h2>Profile Sign-In</h2>
-            <p>Use this if you need to unlock a specific profile before working with it.</p>
-            <div class="grid">
-              <label>
-                Profile ID
-                <input id="profileLoginId" placeholder="Paste the profile ID">
-              </label>
-              <label>
-                Password
-                <input id="profileLoginPassword" type="password" placeholder="Enter the profile password">
-              </label>
-              <label>
-                <input id="profileLoginIsMd5" type="checkbox">
-                The password is already MD5 hashed
-              </label>
-              <button data-action="profileLogin">Sign In To Profile</button>
-            </div>
-          </div>
-
-          <div class="card">
-            <div class="section-kicker">Step 3</div>
             <h2>Proxy Tools</h2>
             <p>Check the current proxy setup or add the default AirProxy settings into a JSON payload.</p>
             <div class="grid">
@@ -407,7 +386,7 @@
           </div>
 
           <div class="card">
-            <div class="section-kicker">Step 4</div>
+            <div class="section-kicker">Step 3</div>
             <h2>Find Profiles</h2>
             <p>Search profiles or fetch details for specific profile IDs.</p>
             <div class="grid">
@@ -659,19 +638,6 @@
         await callApi("/health");
       }
 
-      async function onProfileLogin() {
-        const payload = {
-          profile_id: document.getElementById("profileLoginId").value.trim(),
-          password: document.getElementById("profileLoginPassword").value,
-          password_is_md5: document.getElementById("profileLoginIsMd5").checked
-        };
-        await callApi("/mlx/login", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload)
-        });
-      }
-
       async function onFetchProxy() {
         await callApi("/mlx/proxy/user", {
           headers: buildTokenHeaders()
@@ -783,7 +749,6 @@
       const actions = {
         runAutomation: onRunAutomation,
         health: onHealth,
-        profileLogin: onProfileLogin,
         fetchProxy: onFetchProxy,
         defaultProxy: onDefaultProxy,
         injectProxy: onInjectProxy,
