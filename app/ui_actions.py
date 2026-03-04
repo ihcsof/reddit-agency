@@ -6,6 +6,7 @@ from playwright.async_api import Error as PlaywrightError
 from playwright.async_api import Locator, Page, TimeoutError as PlaywrightTimeoutError
 
 from app.selectors import (
+    COMMENT_TRIGGER,
     COMMENT_SUBMIT,
     COMMENT_TEXTBOX,
     COPY_LINK_OPTION,
@@ -78,8 +79,26 @@ async def fill_contenteditable(locator: Locator, text: str) -> None:
         )
 
 
-async def type_comment(page: Page, text: str) -> None:
+async def ensure_comment_textbox(page: Page) -> Locator:
     textbox = page.locator(COMMENT_TEXTBOX).first
+    if await textbox.count():
+        try:
+            await textbox.wait_for(state="visible", timeout=1_500)
+            return textbox
+        except PlaywrightTimeoutError:
+            pass
+
+    trigger = page.locator(COMMENT_TRIGGER).first
+    if await trigger.count():
+        await click_with_retry(trigger)
+        await page.wait_for_timeout(500)
+
+    await textbox.wait_for(state="visible", timeout=5_000)
+    return textbox
+
+
+async def type_comment(page: Page, text: str) -> None:
+    textbox = await ensure_comment_textbox(page)
     await fill_contenteditable(textbox, text)
 
 
@@ -143,6 +162,7 @@ __all__ = [
     "click_vote",
     "click_with_retry",
     "ensure_clickable",
+    "ensure_comment_textbox",
     "fill_contenteditable",
     "submit_comment",
     "type_comment",
