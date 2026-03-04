@@ -111,3 +111,5 @@ python3 -m app.runner \
 
 The runner uses the existing Multilogin and AirProxy settings from `.env`, enforces a global
 `100` units per `60` seconds rate limit, and prints a JSON array of per-unit results.
+
+The runner accepts profile IDs only. Folder IDs are resolved automatically via the Multilogin API.

@@ -90,11 +90,85 @@ class MultiloginClient:
             await self._playwright.stop()
             self._playwright = None
 
-    async def start_profile(self, profile_id: str) -> dict[str, Any]:
+    async def request(
+        self,
+        method: str,
+        url_or_path: str,
+        *,
+        upstream: str = "mlx",
+        token: str | None = None,
+        params: list[tuple[str, str]] | None = None,
+        json: object | None = None,
+        content: bytes | None = None,
+        headers: Mapping[str, str] | None = None,
+    ) -> Any:
+        response = await self._http.request(
+            method,
+            url_or_path,
+            upstream=upstream,
+            token=token,
+            params=params,
+            json=json,
+            content=content,
+            headers=headers,
+        )
+        response.raise_for_status()
+
+        if not response.content:
+            return None
+
+        content_type = response.headers.get("content-type", "")
+        if "application/json" in content_type:
+            return response.json()
+
+        return response.text
+
+    async def get_profiles(self) -> list[dict]:
+        resp = await self.request("GET", "/profile", upstream="mlx")
+        if isinstance(resp, dict):
+            data = resp.get("data", []) or resp.get("profiles", [])
+            return data if isinstance(data, list) else []
+        return resp if isinstance(resp, list) else []
+
+    async def resolve_folder_id(self, profile_id: str) -> str:
+        profiles = await self.get_profiles()
+
+        for p in profiles:
+            if not isinstance(p, Mapping):
+                continue
+            if p.get("id") == profile_id:
+                folder = p.get("folder")
+                folder_id = (
+                    p.get("folder_id")
+                    or p.get("folderId")
+                    or (folder.get("id") if isinstance(folder, Mapping) else None)
+                )
+                if folder_id:
+                    return str(folder_id)
+
+        raise RuntimeError(f"Unable to resolve folder_id for profile {profile_id}")
+
+    async def start_profile(
+        self,
+        profile_id: str,
+        folder_id: str | None = None,
+    ) -> dict[str, Any]:
+        if not self._settings.mlx_profile_start_path:
+            raise RuntimeError(
+                "MLX_PROFILE_START_PATH is not set. Configure it for your Multilogin deployment."
+            )
+
+        if folder_id is None:
+            folder_id = await self.resolve_folder_id(profile_id)
+
+        path = self._settings.mlx_profile_start_path.format(
+            profile_id=profile_id,
+            folder_id=folder_id,
+        )
         response = await self._request_profile_action(
             action="start",
             profile_id=profile_id,
-            path_or_url=self._settings.mlx_profile_start_path,
+            path_or_url=path,
         )
         return self._expect_json_object(response, action="start", profile_id=profile_id)
 
