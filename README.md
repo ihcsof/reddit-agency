@@ -18,6 +18,9 @@ cp .env.example .env
 playwright install chromium
 ```
 
+On some Linux distributions, Playwright may print an unsupported OS warning and download a
+fallback Chromium build. That is expected if the command completes successfully.
+
 ### Backend
 
 Run the backend on `http://127.0.0.1:8000`:

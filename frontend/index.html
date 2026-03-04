@@ -108,6 +108,16 @@
         font-size: 0.94rem;
       }
 
+      ol {
+        margin: 0;
+        padding-left: 18px;
+        color: var(--muted);
+      }
+
+      li + li {
+        margin-top: 8px;
+      }
+
       .grid {
         display: grid;
         gap: 12px;
@@ -179,6 +189,48 @@
         font-size: 0.84rem;
       }
 
+      .tip {
+        margin-top: 8px;
+        padding: 10px 12px;
+        border-radius: 12px;
+        background: rgba(10, 108, 116, 0.08);
+        color: var(--ink);
+        font-size: 0.88rem;
+      }
+
+      .section-kicker {
+        margin-bottom: 4px;
+        color: var(--warm);
+        font-size: 0.77rem;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      details.card {
+        padding: 0;
+        overflow: hidden;
+      }
+
+      details.card[open] {
+        padding-bottom: 16px;
+      }
+
+      summary {
+        list-style: none;
+        cursor: pointer;
+        padding: 16px;
+        font-weight: 700;
+      }
+
+      summary::-webkit-details-marker {
+        display: none;
+      }
+
+      .details-body {
+        padding: 0 16px;
+      }
+
       .response {
         min-height: 76vh;
         display: grid;
@@ -237,87 +289,106 @@
       <section class="hero">
         <h1>Multilogin Console</h1>
         <p>
-          Static frontend for local interaction with the FastAPI backend. Serve this directory on
-          its own during frontend work, or open the same file through the backend at <code>/</code>.
+          Use this page to connect to the local backend, sign in to a profile, and run the most
+          common proxy and profile checks from one place.
         </p>
         <div class="meta">
-          <span class="pill"><code>frontend/</code> static UI</span>
-          <span class="pill"><code>multilogin_backend/</code> FastAPI API</span>
-          <span class="pill"><code>app/</code> orchestration runner</span>
+          <span class="pill">Step-by-step controls</span>
+          <span class="pill">Saved locally in this browser</span>
+          <span class="pill">Results shown on the right</span>
         </div>
       </section>
 
       <section class="layout">
         <div class="stack">
           <div class="card">
-            <h2>Workspace</h2>
-            <p>Choose the backend base URL and keep the auth token in local storage.</p>
+            <div class="section-kicker">Start Here</div>
+            <h2>How To Use This Page</h2>
+            <ol>
+              <li>Set the backend address and save it.</li>
+              <li>Add a token only if your action needs one.</li>
+              <li>Use the buttons below and read the result panel on the right.</li>
+            </ol>
+            <div class="tip">
+              If you are not sure what to do first, press <strong>Check Connection</strong>.
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="section-kicker">Step 1</div>
+            <h2>Connection Settings</h2>
+            <p>Enter the backend address once. It stays saved in this browser.</p>
             <div class="grid">
               <label>
-                Backend base URL
+                Backend address
                 <input id="apiBase" placeholder="http://127.0.0.1:8000">
               </label>
               <label>
-                Stored Multilogin token
-                <textarea id="sessionToken" placeholder="Paste a bearer token here"></textarea>
+                Access token
+                <textarea id="sessionToken" placeholder="Paste a Multilogin token here if needed"></textarea>
               </label>
               <div class="row">
                 <button id="saveWorkspace">Save Settings</button>
                 <button id="clearToken" class="secondary">Clear Token</button>
-                <button data-action="health" class="secondary">Health</button>
+                <button data-action="health" class="secondary">Check Connection</button>
               </div>
+              <div class="hint">Leave the token empty unless the action asks for authenticated access.</div>
             </div>
           </div>
 
           <div class="card">
-            <h2>Profile Login</h2>
-            <p>Exact doc-anchored flow: <code>POST /mlx/login</code> to upstream <code>/profile/login</code>.</p>
+            <div class="section-kicker">Step 2</div>
+            <h2>Profile Sign-In</h2>
+            <p>Use this if you need to unlock a specific profile before working with it.</p>
             <div class="grid">
               <label>
                 Profile ID
-                <input id="profileLoginId" placeholder="Profile UUID">
+                <input id="profileLoginId" placeholder="Paste the profile ID">
               </label>
               <label>
                 Password
-                <input id="profileLoginPassword" type="password" placeholder="Profile password">
+                <input id="profileLoginPassword" type="password" placeholder="Enter the profile password">
               </label>
               <label>
                 <input id="profileLoginIsMd5" type="checkbox">
-                Password is already MD5 hashed
+                The password is already MD5 hashed
               </label>
-              <button data-action="profileLogin">Login Profile</button>
+              <button data-action="profileLogin">Sign In To Profile</button>
             </div>
           </div>
 
           <div class="card">
-            <h2>Proxy State</h2>
-            <p>Inspect Multilogin proxy data and inject the default AirProxy payload into a JSON object.</p>
+            <div class="section-kicker">Step 3</div>
+            <h2>Proxy Tools</h2>
+            <p>Check the current proxy setup or add the default AirProxy settings into a JSON payload.</p>
             <div class="grid">
               <div class="row">
-                <button data-action="fetchProxy">Fetch Proxy Data</button>
-                <button data-action="defaultProxy" class="secondary">Default AirProxy</button>
+                <button data-action="fetchProxy">Check Current Proxy</button>
+                <button data-action="defaultProxy" class="secondary">Show Default AirProxy</button>
               </div>
               <label>
-                Inject default proxy into payload at path
+                Where to place the proxy data
                 <input id="injectPath" value="proxy" placeholder="proxy or parameters.proxy">
               </label>
               <label>
-                Payload to modify
+                JSON to update
                 <textarea id="injectPayload">{
   "name": "example-profile",
   "parameters": {}
 }</textarea>
               </label>
-              <button data-action="injectProxy" class="warm">Inject Default Proxy</button>
+              <div class="hint">Example path: <code>proxy</code> or <code>parameters.proxy</code>.</div>
+              <button data-action="injectProxy" class="warm">Add Default Proxy To JSON</button>
             </div>
           </div>
 
           <div class="card">
-            <h2>Profile Helpers</h2>
-            <p>Thin wrappers over <code>/profile/search</code> and <code>/profile/metas</code>.</p>
+            <div class="section-kicker">Step 4</div>
+            <h2>Find Profiles</h2>
+            <p>Search profiles or fetch details for specific profile IDs.</p>
             <div class="grid">
               <label>
-                Search payload JSON
+                Search request JSON
                 <textarea id="searchPayload">{
   "limit": 20,
   "offset": 0,
@@ -328,11 +399,11 @@
 }</textarea>
               </label>
               <div class="row">
-                <button data-action="profileSearch">Profile Search</button>
-                <button data-action="profileMetas" class="secondary">Profile Metas</button>
+                <button data-action="profileSearch">Search Profiles</button>
+                <button data-action="profileMetas" class="secondary">Load Profile Details</button>
               </div>
               <label>
-                Metas payload JSON
+                Profile details request JSON
                 <textarea id="metasPayload">{
   "ids": []
 }</textarea>
@@ -340,85 +411,89 @@
             </div>
           </div>
 
-          <div class="card">
-            <h2>Webhook Tools</h2>
-            <p>Send a local webhook notification and inspect the recent event buffer.</p>
-            <div class="grid">
-              <label>
-                Optional webhook secret
-                <input id="webhookSecret" placeholder="Used as X-Webhook-Secret if set">
-              </label>
-              <label>
-                Test webhook payload
-                <textarea id="webhookPayload">{
+          <details class="card">
+            <summary>Advanced: Webhook Tools</summary>
+            <div class="details-body">
+              <p>Send a test webhook event and inspect recently received events.</p>
+              <div class="grid">
+                <label>
+                  Webhook secret
+                  <input id="webhookSecret" placeholder="Optional">
+                </label>
+                <label>
+                  Test webhook JSON
+                  <textarea id="webhookPayload">{
   "event": "proxy_changed",
   "profile_id": "profile-id",
   "proxy_id": "proxy-id"
 }</textarea>
-              </label>
-              <div class="row">
-                <button data-action="sendWebhook">Send Test Webhook</button>
-                <button data-action="loadWebhookEvents" class="secondary">Load Events</button>
-                <button data-action="refreshProxyState" class="secondary">Refresh Proxy State</button>
+                </label>
+                <div class="row">
+                  <button data-action="sendWebhook">Send Test Webhook</button>
+                  <button data-action="loadWebhookEvents" class="secondary">Load Recent Events</button>
+                  <button data-action="refreshProxyState" class="secondary">Refresh Proxy State</button>
+                </div>
               </div>
             </div>
-          </div>
+          </details>
 
-          <div class="card">
-            <h2>Raw Requests</h2>
-            <p>Call <code>/mlx/raw/*</code>, <code>/launcher/raw/*</code>, or any local backend route directly.</p>
-            <div class="grid">
-              <div class="grid two">
+          <details class="card">
+            <summary>Advanced: Raw Request Tool</summary>
+            <div class="details-body">
+              <p>Use this only if the standard buttons above do not cover what you need.</p>
+              <div class="grid">
+                <div class="grid two">
+                  <label>
+                    Request target
+                    <select id="rawTarget">
+                      <option value="mlx">Multilogin API</option>
+                      <option value="launcher">Launcher API</option>
+                      <option value="local">Local backend route</option>
+                    </select>
+                  </label>
+                  <label>
+                    Request method
+                    <select id="rawMethod">
+                      <option>GET</option>
+                      <option>POST</option>
+                      <option>PUT</option>
+                      <option>PATCH</option>
+                      <option>DELETE</option>
+                    </select>
+                  </label>
+                </div>
                 <label>
-                  Target
-                  <select id="rawTarget">
-                    <option value="mlx">mlx</option>
-                    <option value="launcher">launcher</option>
-                    <option value="local">local route</option>
-                  </select>
+                  Path
+                  <input id="rawPath" placeholder="/profile/search or /api/v1/version">
                 </label>
                 <label>
-                  Method
-                  <select id="rawMethod">
-                    <option>GET</option>
-                    <option>POST</option>
-                    <option>PUT</option>
-                    <option>PATCH</option>
-                    <option>DELETE</option>
-                  </select>
+                  Query string
+                  <input id="rawQuery" placeholder="limit=10&offset=0">
                 </label>
+                <label>
+                  Token override
+                  <input id="rawToken" placeholder="Leave empty to use the saved token">
+                </label>
+                <label>
+                  JSON body
+                  <textarea id="rawBody" placeholder='{"key":"value"}'></textarea>
+                </label>
+                <button data-action="rawRequest">Send Custom Request</button>
               </div>
-              <label>
-                Path
-                <input id="rawPath" placeholder="/profile/search or /api/v1/version">
-              </label>
-              <label>
-                Query string
-                <input id="rawQuery" placeholder="limit=10&offset=0">
-              </label>
-              <label>
-                Override token
-                <input id="rawToken" placeholder="Leave blank to use stored token">
-              </label>
-              <label>
-                JSON body
-                <textarea id="rawBody" placeholder='{"key":"value"}'></textarea>
-              </label>
-              <button data-action="rawRequest">Send Raw Request</button>
             </div>
-          </div>
+          </details>
         </div>
 
         <div class="stack">
           <div class="card response">
             <div class="response-head">
-              <h2>Response</h2>
-              <div class="status" id="responseStatus">Idle</div>
+              <h2>Result</h2>
+              <div class="status" id="responseStatus">Waiting for an action</div>
             </div>
             <div class="hint">
-              Non-2xx upstream responses are forwarded with their status code and body.
+              Every button sends a request. The latest server response appears here.
             </div>
-            <pre id="responseBody">No request yet.</pre>
+            <pre id="responseBody">No action yet.</pre>
           </div>
         </div>
       </section>
@@ -488,7 +563,7 @@
 
       async function callApi(path, options = {}) {
         saveWorkspace();
-        setResponse("Loading", "Request in flight...", true);
+        setResponse("Working", "Request in progress...", true);
         const response = await fetch(resolveApiUrl(path), options);
         const contentType = response.headers.get("content-type") || "";
         const payload = contentType.includes("application/json")
