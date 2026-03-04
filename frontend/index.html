@@ -432,6 +432,7 @@
   "ids": []
 }</textarea>
               </label>
+              <div class="hint">Add at least one profile ID inside <code>ids</code> before loading details.</div>
             </div>
           </div>
 
@@ -590,16 +591,32 @@
         setResponse("Working", "Request in progress...", true);
         const response = await fetch(resolveApiUrl(path), options);
         const contentType = response.headers.get("content-type") || "";
-        const payload = contentType.includes("application/json")
-          ? await response.json()
-          : await response.text();
+        const rawText = await response.text();
+        let payload = rawText;
+
+        if (contentType.includes("application/json")) {
+          try {
+            payload = rawText ? JSON.parse(rawText) : null;
+          } catch {
+            payload = rawText;
+          }
+        }
+
         setResponse(`${response.status} ${response.statusText}`, payload, response.ok);
         return payload;
       }
 
       function parseJson(id) {
         const value = document.getElementById(id).value.trim();
-        return value ? JSON.parse(value) : null;
+        if (!value) {
+          return null;
+        }
+
+        try {
+          return JSON.parse(value);
+        } catch (error) {
+          throw new Error(`Invalid JSON in ${id}`);
+        }
       }
 
       function parseLines(id) {
@@ -688,13 +705,25 @@
       }
 
       async function onProfileMetas() {
+        const payload = parseJson("metasPayload");
+        const ids = Array.isArray(payload?.ids)
+          ? payload.ids.map((value) => String(value).trim()).filter(Boolean)
+          : [];
+
+        if (!ids.length) {
+          throw new Error("Add at least one profile ID in the 'Profile details request JSON' box");
+        }
+
         await callApi("/mlx/profile/metas", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
             ...buildTokenHeaders()
           },
-          body: JSON.stringify(parseJson("metasPayload"))
+          body: JSON.stringify({
+            ...payload,
+            ids
+          })
         });
       }
 
