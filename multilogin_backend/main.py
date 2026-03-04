@@ -12,6 +12,7 @@ from multilogin_backend.routers.frontend import router as frontend_router
 from multilogin_backend.routers.health import router as health_router
 from multilogin_backend.routers.launcher import router as launcher_router
 from multilogin_backend.routers.mlx import router as mlx_router
+from multilogin_backend.routers.runner import router as runner_router
 from multilogin_backend.routers.webhooks import router as webhook_router
 from multilogin_backend.services.mlx_client import MultiloginClient
 
@@ -45,6 +46,7 @@ def create_app() -> FastAPI:
     app.include_router(webhook_router)
     app.include_router(launcher_router)
     app.include_router(airproxy_router)
+    app.include_router(runner_router)
     return app
 
 

@@ -176,30 +176,44 @@ class MultiloginClient:
             logger.info("Multilogin token refreshed")
             return self.token
 
-    async def get_profiles(self) -> list[dict]:
-        resp = await self.request("GET", "/profile", upstream="mlx")
-        if isinstance(resp, dict):
-            data = resp.get("data", []) or resp.get("profiles", [])
-            return data if isinstance(data, list) else []
-        return resp if isinstance(resp, list) else []
-
     async def resolve_folder_id(self, profile_id: str) -> str:
-        profiles = await self.get_profiles()
+        resp = await self.request(
+            "POST",
+            "/profile/metas",
+            upstream="mlx",
+            json={"ids": [profile_id]},
+        )
 
-        for p in profiles:
-            if not isinstance(p, Mapping):
-                continue
-            if p.get("id") == profile_id:
-                folder = p.get("folder")
-                folder_id = (
-                    p.get("folder_id")
-                    or p.get("folderId")
-                    or (folder.get("id") if isinstance(folder, Mapping) else None)
-                )
-                if folder_id:
-                    return str(folder_id)
+        profiles: list[dict[str, Any]] = []
+        if isinstance(resp, Mapping):
+            data = resp.get("data")
+            if isinstance(data, Mapping):
+                nested_profiles = data.get("profiles")
+                if isinstance(nested_profiles, list):
+                    profiles = [p for p in nested_profiles if isinstance(p, Mapping)]
 
-        raise RuntimeError(f"Unable to resolve folder_id for profile {profile_id}")
+            if not profiles:
+                flat_profiles = resp.get("profiles")
+                if isinstance(flat_profiles, list):
+                    profiles = [p for p in flat_profiles if isinstance(p, Mapping)]
+
+        profile = profiles[0] if profiles else None
+        if profile is None:
+            raise RuntimeError(f"Unable to resolve folder_id for profile {profile_id}")
+
+        folder = profile.get("folder")
+        metadata = profile.get("metadata")
+        folder_id = (
+            profile.get("folder_id")
+            or profile.get("folderId")
+            or (folder.get("id") if isinstance(folder, Mapping) else None)
+            or (folder.get("_id") if isinstance(folder, Mapping) else None)
+            or (metadata.get("folder_id") if isinstance(metadata, Mapping) else None)
+        )
+        if folder_id:
+            return str(folder_id)
+
+        raise RuntimeError("folder_id not found in profile metas response")
 
     async def start_profile(
         self,
@@ -374,7 +388,7 @@ class MultiloginClient:
             return response
 
         await self.refresh_token()
-        return await self._request_once(
+        response = await self._request_once(
             method,
             url_or_path,
             upstream=upstream,
@@ -384,6 +398,9 @@ class MultiloginClient:
             content=content,
             headers=headers,
         )
+        if response.status_code == 401:
+            raise RuntimeError("Multilogin token invalid/expired even after refresh")
+        return response
 
     async def _request_once(
         self,

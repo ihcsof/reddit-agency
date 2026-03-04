@@ -302,6 +302,30 @@
       <section class="layout">
         <div class="stack">
           <div class="card">
+            <div class="section-kicker">Start Automation</div>
+            <h2>Run Comment Batch</h2>
+            <p>Paste one post URL, one profile ID per line, and one comment per line.</p>
+            <div class="grid">
+              <label>
+                Post URL
+                <input id="runnerTargetUrl" placeholder="https://example.com/post">
+              </label>
+              <label>
+                Profile IDs
+                <textarea id="runnerProfiles" placeholder="One profile ID per line"></textarea>
+              </label>
+              <label>
+                Comments
+                <textarea id="runnerComments" placeholder="One comment per line"></textarea>
+              </label>
+              <div class="hint">The number of profile IDs and comments must match.</div>
+              <div class="row">
+                <button data-action="runAutomation" class="warm">Start Automation</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
             <div class="section-kicker">Start Here</div>
             <h2>How To Use This Page</h2>
             <ol>
@@ -578,6 +602,42 @@
         return value ? JSON.parse(value) : null;
       }
 
+      function parseLines(id) {
+        return document.getElementById(id).value
+          .split(/\r?\n/)
+          .map((value) => value.trim())
+          .filter(Boolean);
+      }
+
+      async function onRunAutomation() {
+        const targetUrl = document.getElementById("runnerTargetUrl").value.trim();
+        const profiles = parseLines("runnerProfiles");
+        const comments = parseLines("runnerComments");
+
+        if (!targetUrl) {
+          throw new Error("Post URL is required");
+        }
+        if (!profiles.length) {
+          throw new Error("At least one profile ID is required");
+        }
+        if (!comments.length) {
+          throw new Error("At least one comment is required");
+        }
+        if (profiles.length !== comments.length) {
+          throw new Error("Profiles and comments must have the same number of lines");
+        }
+
+        await callApi("/runner/run", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            target_url: targetUrl,
+            profiles,
+            comments
+          })
+        });
+      }
+
       async function onHealth() {
         await callApi("/health");
       }
@@ -692,6 +752,7 @@
       }
 
       const actions = {
+        runAutomation: onRunAutomation,
         health: onHealth,
         profileLogin: onProfileLogin,
         fetchProxy: onFetchProxy,

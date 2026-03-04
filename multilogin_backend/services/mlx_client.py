@@ -97,7 +97,9 @@ class MultiloginClient:
 
         content_type = response.headers.get("content-type", "")
         if "application/json" in content_type:
-            return JSONResponse(content=response.json(), status_code=response.status_code)
+            payload = self._try_parse_json(response)
+            if payload is not None:
+                return JSONResponse(content=payload, status_code=response.status_code)
 
         return Response(
             content=response.content,
@@ -108,10 +110,21 @@ class MultiloginClient:
     def _extract_error_detail(self, response: httpx.Response) -> object:
         content_type = response.headers.get("content-type", "")
         if "application/json" in content_type:
-            try:
-                return response.json()
-            except ValueError:
-                pass
+            payload = self._try_parse_json(response)
+            if payload is not None:
+                return payload
 
-        text = response.text.strip()
+        text = self._safe_text(response).strip()
         return text or "Upstream request failed"
+
+    def _try_parse_json(self, response: httpx.Response) -> object | None:
+        try:
+            return response.json()
+        except (ValueError, UnicodeDecodeError):
+            return None
+
+    def _safe_text(self, response: httpx.Response) -> str:
+        try:
+            return response.text
+        except UnicodeDecodeError:
+            return response.content.decode("utf-8", errors="replace")
