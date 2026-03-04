@@ -35,6 +35,7 @@ class MultiloginClient:
         headers: Mapping[str, str] | None = None,
     ) -> Response:
         request_headers = self._sanitize_headers(headers)
+        request_headers.setdefault("Accept-Encoding", "identity")
         resolved_token = self._resolve_token(token=token, headers=headers)
 
         try:
@@ -84,7 +85,7 @@ class MultiloginClient:
         if headers is None:
             return {}
 
-        ignored = {"authorization", "content-length", "host", "x-mlx-token"}
+        ignored = {"accept-encoding", "authorization", "content-length", "host", "x-mlx-token"}
         return {
             key: value
             for key, value in headers.items()
