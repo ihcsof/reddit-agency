@@ -15,9 +15,9 @@ SHARE_BUTTON = (
 
 COPY_LINK_OPTION = ".share-menu-copy-link-option"
 
-COMMENT_TEXTBOX = 'shreddit-composer div[contenteditable="true"][role="textbox"]'
+COMMENT_TEXTBOX = 'shreddit-composer div[contenteditable="true"][role="textbox"]:visible'
 
-COMMENT_SUBMIT = 'shreddit-composer button[slot="submit-button"][type="submit"]'
+COMMENT_SUBMIT = 'shreddit-composer button[slot="submit-button"][type="submit"]:visible'
 
 __all__ = [
     "COMMENT_SUBMIT",

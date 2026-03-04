@@ -22,6 +22,8 @@ from multilogin_backend.services.upstream_http import UpstreamHttpClient, Upstre
 
 
 logger = logging.getLogger(__name__)
+CORE_DOWNLOAD_RETRY_DELAY_S = 5.0
+CORE_DOWNLOAD_MAX_RETRIES = 24
 
 
 @dataclass(slots=True)
@@ -328,22 +330,43 @@ class MultiloginClient:
             profile_id=profile_id,
         )
 
-        try:
-            response = await self._send_request(
-                method,
-                url_or_path,
-                upstream="launcher",
-                token=None,
-                params=None,
-                json=payload,
-                content=None,
-                headers=None,
-            )
-        except UpstreamRequestError as exc:
-            raise RuntimeError(f"Failed to {action} profile '{profile_id}': {exc.detail}") from exc
+        attempts = 0
+        while True:
+            try:
+                response = await self._send_request(
+                    method,
+                    url_or_path,
+                    upstream="launcher",
+                    token=None,
+                    params=None,
+                    json=payload,
+                    content=None,
+                    headers=None,
+                )
+            except UpstreamRequestError as exc:
+                raise RuntimeError(f"Failed to {action} profile '{profile_id}': {exc.detail}") from exc
 
-        if response.is_success:
-            return response
+            if response.is_success:
+                return response
+
+            error_code = self._response_error_code(response)
+            if (
+                action == "start"
+                and error_code == "CORE_DOWNLOADING_STARTED"
+                and attempts < CORE_DOWNLOAD_MAX_RETRIES
+            ):
+                attempts += 1
+                logger.info(
+                    "Multilogin core download in progress for profile '%s'; retrying start in %.1fs (%d/%d)",
+                    profile_id,
+                    CORE_DOWNLOAD_RETRY_DELAY_S,
+                    attempts,
+                    CORE_DOWNLOAD_MAX_RETRIES,
+                )
+                await asyncio.sleep(CORE_DOWNLOAD_RETRY_DELAY_S)
+                continue
+
+            break
 
         raise RuntimeError(
             f"Failed to {action} profile '{profile_id}': {self._response_detail(response)}"
@@ -488,6 +511,28 @@ class MultiloginClient:
 
         text = response.text.strip()
         return text or f"upstream status {response.status_code}"
+
+    def _response_error_code(self, response: httpx.Response) -> str | None:
+        content_type = response.headers.get("content-type", "")
+        if "application/json" not in content_type:
+            return None
+
+        try:
+            payload = response.json()
+        except ValueError:
+            return None
+
+        if not isinstance(payload, Mapping):
+            return None
+
+        status = payload.get("status")
+        if not isinstance(status, Mapping):
+            return None
+
+        error_code = status.get("error_code")
+        if isinstance(error_code, str) and error_code:
+            return error_code
+        return None
 
     def _remember_session(self, session: ManagedProfileSession) -> None:
         if session.page is not None:
