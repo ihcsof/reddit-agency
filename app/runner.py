@@ -46,17 +46,25 @@ def _extract_ws_endpoint(payload: Mapping[str, Any]) -> str:
 
     for part in settings.mlx_ws_field.split("."):
         if not isinstance(value, Mapping) or part not in value:
-            raise RuntimeError(
-                f"Could not find websocket endpoint field '{settings.mlx_ws_field}' in start_profile response"
-            )
+            value = None
+            break
         value = value[part]
 
-    if not isinstance(value, str) or not value.strip():
-        raise RuntimeError(
-            f"Start profile response field '{settings.mlx_ws_field}' did not contain a websocket URL"
-        )
+    if isinstance(value, str) and value.strip():
+        return value
 
-    return value
+    port = payload.get("port")
+    if port is None and isinstance(payload.get("data"), Mapping):
+        port = payload["data"].get("port")
+    if port is None and isinstance(payload.get("value"), Mapping):
+        port = payload["value"].get("port")
+
+    if port is not None:
+        return f"http://127.0.0.1:{port}"
+
+    raise RuntimeError(
+        f"Could not find websocket endpoint field '{settings.mlx_ws_field}' or a CDP port in start_profile response"
+    )
 
 
 async def _close_profile_resources(

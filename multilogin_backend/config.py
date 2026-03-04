@@ -34,12 +34,13 @@ class Settings:
     mlx_base_url: str = os.getenv("MLX_BASE_URL", "https://api.multilogin.com").rstrip("/")
     mlx_launcher_base_url: str = os.getenv(
         "MLX_LAUNCHER_BASE_URL",
-        "https://launcher.mlx.yt:45001/api/v1",
+        "https://launcher.mlx.yt:45001/api/v2",
     ).rstrip("/")
     mlx_token: str | None = os.getenv("MLX_TOKEN") or None
     mlx_refresh_token: str = os.getenv("MLX_REFRESH_TOKEN", "")
     mlx_email: str = os.getenv("MLX_EMAIL", "")
     mlx_workspace_id: str = os.getenv("MLX_WORKSPACE_ID", "")
+    mlx_folder_id: str = os.getenv("MLX_FOLDER_ID", "").strip()
     mlx_timeout_s: int = _get_int("MLX_TIMEOUT_S", 30)
     mlx_profile_start_path: str = os.getenv("MLX_PROFILE_START_PATH", "").strip()
     mlx_profile_stop_path: str = os.getenv("MLX_PROFILE_STOP_PATH", "").strip()

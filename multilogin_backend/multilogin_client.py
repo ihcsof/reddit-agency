@@ -5,6 +5,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass, field
 import logging
 from typing import Any
+from urllib.parse import urlencode
 
 import httpx
 from playwright.async_api import (
@@ -226,12 +227,13 @@ class MultiloginClient:
             )
 
         if folder_id is None:
-            folder_id = await self.resolve_folder_id(profile_id)
+            folder_id = self._settings.mlx_folder_id or await self.resolve_folder_id(profile_id)
 
         path = self._settings.mlx_profile_start_path.format(
             profile_id=profile_id,
             folder_id=folder_id,
         )
+        path = f"{path}?{urlencode({'automation_type': 'playwright'})}"
         response = await self._request_profile_action(
             action="start",
             profile_id=profile_id,
@@ -353,6 +355,9 @@ class MultiloginClient:
         path_or_url: str,
         profile_id: str,
     ) -> tuple[str, str, dict[str, str] | None]:
+        if "/profile/f/" in path_or_url and "/start" in path_or_url:
+            return "GET", path_or_url, None
+
         if "{profile_id}" in path_or_url or "{profileId}" in path_or_url:
             return (
                 "GET",
@@ -429,17 +434,25 @@ class MultiloginClient:
         value: Any = payload
         for part in self._settings.mlx_ws_field.split("."):
             if not isinstance(value, Mapping) or part not in value:
-                raise RuntimeError(
-                    f"Could not find websocket endpoint field '{self._settings.mlx_ws_field}' in start_profile response"
-                )
+                value = None
+                break
             value = value[part]
 
-        if not isinstance(value, str) or not value.strip():
-            raise RuntimeError(
-                f"Start profile response field '{self._settings.mlx_ws_field}' did not contain a websocket URL"
-            )
+        if isinstance(value, str) and value.strip():
+            return value
 
-        return value
+        port = payload.get("port")
+        if port is None and isinstance(payload.get("data"), Mapping):
+            port = payload["data"].get("port")
+        if port is None and isinstance(payload.get("value"), Mapping):
+            port = payload["value"].get("port")
+
+        if port is not None:
+            return f"http://127.0.0.1:{port}"
+
+        raise RuntimeError(
+            f"Could not find websocket endpoint field '{self._settings.mlx_ws_field}' or a CDP port in start_profile response"
+        )
 
     def _expect_json_object(
         self,

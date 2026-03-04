@@ -60,9 +60,13 @@ Important values in `.env`:
 - `APP_ENV=dev`
 - `APP_CORS_ORIGINS=http://127.0.0.1:3000,http://localhost:3000`
 - `MLX_BASE_URL=https://api.multilogin.com`
-- `MLX_LAUNCHER_BASE_URL=https://launcher.mlx.yt:45001/api/v1`
+- `MLX_LAUNCHER_BASE_URL=https://launcher.mlx.yt:45001/api/v2`
 - `MLX_TIMEOUT_S=30`
 - `MLX_TOKEN=` optional default bearer token
+- `MLX_REFRESH_TOKEN=` refresh token used when the bearer token expires
+- `MLX_EMAIL=` Multilogin account email used for token refresh
+- `MLX_WORKSPACE_ID=` workspace ID used for token refresh
+- `MLX_FOLDER_ID=` fixed folder ID used for profile start requests
 - `MLX_PROFILE_START_PATH=` required for the lifecycle client
 - `MLX_PROFILE_STOP_PATH=` required for the lifecycle client
 - `MLX_WS_FIELD=wsUrl` field name or dotted path used to read the websocket URL
