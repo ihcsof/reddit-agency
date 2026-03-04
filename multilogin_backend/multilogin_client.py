@@ -252,8 +252,16 @@ class MultiloginClient:
         if response.is_success or response.status_code == 204:
             return
 
+        detail = self._response_detail(response)
+        if response.status_code == 404 and "page not found" in detail.lower():
+            logger.warning(
+                "Ignoring launcher stop 404 for profile '%s' after local browser shutdown",
+                profile_id,
+            )
+            return
+
         raise RuntimeError(
-            f"Failed to stop profile '{profile_id}': {self._response_detail(response)}"
+            f"Failed to stop profile '{profile_id}': {detail}"
         )
 
     async def connect_playwright(self, *, ws_endpoint: str) -> tuple[Browser, BrowserContext]:
@@ -412,7 +420,7 @@ class MultiloginClient:
             content=content,
             headers=headers,
         )
-        if upstream != "mlx" or response.status_code != 401:
+        if response.status_code != 401:
             return response
 
         await self.refresh_token()
@@ -446,7 +454,7 @@ class MultiloginClient:
             method,
             url_or_path,
             upstream=upstream,
-            token=(token or self.token) if upstream == "mlx" else None,
+            token=token or self.token,
             params=params,
             json=json,
             content=content,
