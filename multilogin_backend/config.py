@@ -37,6 +37,9 @@ class Settings:
         "https://launcher.mlx.yt:45001/api/v1",
     ).rstrip("/")
     mlx_token: str | None = os.getenv("MLX_TOKEN") or None
+    mlx_refresh_token: str = os.getenv("MLX_REFRESH_TOKEN", "")
+    mlx_email: str = os.getenv("MLX_EMAIL", "")
+    mlx_workspace_id: str = os.getenv("MLX_WORKSPACE_ID", "")
     mlx_timeout_s: int = _get_int("MLX_TIMEOUT_S", 30)
     mlx_profile_start_path: str = os.getenv("MLX_PROFILE_START_PATH", "").strip()
     mlx_profile_stop_path: str = os.getenv("MLX_PROFILE_STOP_PATH", "").strip()

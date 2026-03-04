@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import asyncio
 from collections.abc import Mapping
 from dataclasses import dataclass, field
+import logging
 from typing import Any
 
 import httpx
@@ -16,6 +18,9 @@ from playwright.async_api import (
 
 from multilogin_backend.config import Settings, get_settings
 from multilogin_backend.services.upstream_http import UpstreamHttpClient, UpstreamRequestError
+
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(slots=True)
@@ -65,9 +70,11 @@ class MultiloginClient:
     def __init__(self, settings: Settings | None = None) -> None:
         self._settings = settings or get_settings()
         self._http = UpstreamHttpClient(self._settings)
+        self.token = self._settings.mlx_token
         self._playwright: Playwright | None = None
         self._sessions_by_page: dict[int, ManagedProfileSession] = {}
         self._sessions_by_context: dict[int, ManagedProfileSession] = {}
+        self._refresh_lock = asyncio.Lock()
 
     async def aclose(self) -> None:
         sessions = list(
@@ -102,7 +109,7 @@ class MultiloginClient:
         content: bytes | None = None,
         headers: Mapping[str, str] | None = None,
     ) -> Any:
-        response = await self._http.request(
+        response = await self._send_request(
             method,
             url_or_path,
             upstream=upstream,
@@ -122,6 +129,52 @@ class MultiloginClient:
             return response.json()
 
         return response.text
+
+    async def refresh_token(self) -> str:
+        async with self._refresh_lock:
+            if not self._settings.mlx_refresh_token:
+                raise RuntimeError("MLX_REFRESH_TOKEN is required to refresh the Multilogin token")
+            if not self._settings.mlx_email:
+                raise RuntimeError("MLX_EMAIL is required to refresh the Multilogin token")
+            if not self._settings.mlx_workspace_id:
+                raise RuntimeError("MLX_WORKSPACE_ID is required to refresh the Multilogin token")
+            if not self.token:
+                raise RuntimeError("MLX_TOKEN is required to refresh the Multilogin token")
+
+            payload = {
+                "email": self._settings.mlx_email,
+                "refresh_token": self._settings.mlx_refresh_token,
+                "workspace_id": self._settings.mlx_workspace_id,
+            }
+            headers = {"Content-Type": "application/json"}
+            if self.token:
+                headers["Authorization"] = f"Bearer {self.token}"
+
+            try:
+                response = await self._http._client.post(
+                    f"{self._settings.mlx_base_url}/user/refresh_token",
+                    json=payload,
+                    headers=headers,
+                )
+            except httpx.HTTPError as exc:
+                raise RuntimeError("Failed refreshing MLX token: failed to reach upstream service") from exc
+
+            if response.status_code != 200:
+                detail = response.text.strip() or f"upstream status {response.status_code}"
+                raise RuntimeError(f"Failed refreshing MLX token: {detail}")
+
+            try:
+                data = response.json()
+            except ValueError as exc:
+                raise RuntimeError("Token refresh response was not valid JSON") from exc
+
+            new_token = data.get("data", {}).get("token") if isinstance(data, Mapping) else None
+            if not new_token:
+                raise RuntimeError("Token refresh response missing token")
+
+            self.token = str(new_token)
+            logger.info("Multilogin token refreshed")
+            return self.token
 
     async def get_profiles(self) -> list[dict]:
         resp = await self.request("GET", "/profile", upstream="mlx")
@@ -260,11 +313,15 @@ class MultiloginClient:
         )
 
         try:
-            response = await self._http.request(
+            response = await self._send_request(
                 method,
                 url_or_path,
                 upstream="launcher",
+                token=None,
+                params=None,
                 json=payload,
+                content=None,
+                headers=None,
             )
         except UpstreamRequestError as exc:
             raise RuntimeError(f"Failed to {action} profile '{profile_id}': {exc.detail}") from exc
@@ -290,6 +347,66 @@ class MultiloginClient:
             )
 
         return "POST", path_or_url, {"profile_id": profile_id}
+
+    async def _send_request(
+        self,
+        method: str,
+        url_or_path: str,
+        *,
+        upstream: str,
+        token: str | None,
+        params: list[tuple[str, str]] | None,
+        json: object | None,
+        content: bytes | None,
+        headers: Mapping[str, str] | None,
+    ) -> httpx.Response:
+        response = await self._request_once(
+            method,
+            url_or_path,
+            upstream=upstream,
+            token=token,
+            params=params,
+            json=json,
+            content=content,
+            headers=headers,
+        )
+        if response.status_code != 401:
+            return response
+
+        await self.refresh_token()
+        return await self._request_once(
+            method,
+            url_or_path,
+            upstream=upstream,
+            token=token,
+            params=params,
+            json=json,
+            content=content,
+            headers=headers,
+        )
+
+    async def _request_once(
+        self,
+        method: str,
+        url_or_path: str,
+        *,
+        upstream: str,
+        token: str | None,
+        params: list[tuple[str, str]] | None,
+        json: object | None,
+        content: bytes | None,
+        headers: Mapping[str, str] | None,
+    ) -> httpx.Response:
+        return await self._http.request(
+            method,
+            url_or_path,
+            upstream=upstream,
+            token=token or self.token,
+            params=params,
+            json=json,
+            content=content,
+            headers=headers,
+        )
 
     def _extract_ws_endpoint(self, payload: Mapping[str, Any]) -> str:
         value: Any = payload
